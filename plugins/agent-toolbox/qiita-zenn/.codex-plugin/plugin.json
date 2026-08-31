@@ -1,0 +1,18 @@
+{
+  "name": "qiita-zenn",
+  "version": "0.1.0",
+  "description": "QiitaとZennの記事作成skillを提供します。",
+  "author": {
+    "name": "navy1634"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Qiita & Zenn",
+    "shortDescription": "QiitaとZennの記事作成",
+    "longDescription": "QiitaとZenn向けの記事作成を支援するskillをまとめています。",
+    "developerName": "navy1634",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "QiitaやZennの記事作成を支援してください。"
+  }
+}

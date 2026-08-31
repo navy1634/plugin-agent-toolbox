@@ -1,0 +1,33 @@
+{
+  "name": "agent-toolbox",
+  "owner": {
+    "name": "navy1634"
+  },
+  "description": "Claude Code と Codex で利用できる開発支援スキルのマーケットプレイス",
+  "plugins": [
+    {
+      "name": "planning-review-docs",
+      "source": "./plugins/agent-toolbox/planning-review-docs",
+      "description": "計画、レビュー、ドキュメント、事後検証のskillを提供します。",
+      "version": "0.1.0"
+    },
+    {
+      "name": "general-tools",
+      "source": "./plugins/agent-toolbox/general-tools",
+      "description": "AWS CLI、GitHub Actions、Terraformなどの汎用ツールskillを提供します。",
+      "version": "0.1.0"
+    },
+    {
+      "name": "coding-workflow",
+      "source": "./plugins/agent-toolbox/coding-workflow",
+      "description": "コーディングと開発workflowのskillを提供します。",
+      "version": "0.1.0"
+    },
+    {
+      "name": "qiita-zenn",
+      "source": "./plugins/agent-toolbox/qiita-zenn",
+      "description": "QiitaとZennの記事作成skillを提供します。",
+      "version": "0.1.0"
+    }
+  ]
+}
