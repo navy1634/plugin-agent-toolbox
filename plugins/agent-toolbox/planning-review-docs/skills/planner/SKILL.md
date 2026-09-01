@@ -1,3 +1,8 @@
+---
+name: planner
+description: 要件と既存コードを分析し、設計判断、実装手順、テスト戦略、リスク、成功条件を含む実装計画を作成する。
+---
+
 ## Reference Skills
 
 Consult these skills for domain-specific patterns when planning:

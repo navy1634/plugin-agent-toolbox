@@ -7,7 +7,7 @@ description: GitHubリポジトリで整備するガイドライン系ドキュ�
 
 ## 基本方針
 
-- 対象は GitHub Organization 配下の非公開リポジトリ。OSS 公開向けの CODE_OF_CONDUCT、FUNDING、LICENSE、SECURITY の外部開示は対象外
+- 対象は GitHub 配下の非公開リポジトリ。OSS 公開向けの CODE_OF_CONDUCT、FUNDING、LICENSE、SECURITY の外部開示は対象外
 - リポジトリを開いた人が「これは何か」「どう動かすか」「どう貢献するか」「困ったらどこを見るか」の 4 つに、README とリンクだけで辿り着ける状態にする
 - ドキュメントはコードの source of truth に従属させる。バージョン番号、環境変数、依存パッケージなどはコード側で管理し、ドキュメントからは参照だけにする
 - 「あるべきだが空」より「まだ書いていない」の方が誠実。中身のない `CONTRIBUTING.md` を置くくらいなら削除する

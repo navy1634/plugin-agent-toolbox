@@ -1,8 +1,0 @@
-{
-  "name": "qiita-zenn",
-  "version": "0.1.0",
-  "description": "QiitaとZennの記事作成skillを提供します。",
-  "author": {
-    "name": "navy1634"
-  }
-}

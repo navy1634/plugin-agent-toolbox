@@ -1,4 +1,3 @@
-{{- /* chezmoi:template:left-delimiter=[[ right-delimiter=]] */ -}}
 ---
 name: gh-actions
 description: GitHub Actions ワークフロー開発規約。権限最小化、action の SHA pin、OIDC、タスクランナー経由の実行、reusable workflow、Terraform CI、gh CLI 運用、DoD を含む。

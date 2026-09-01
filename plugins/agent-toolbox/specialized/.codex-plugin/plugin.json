@@ -1,0 +1,18 @@
+{
+  "name": "specialized",
+  "version": "0.1.0",
+  "description": "特定用途のskillを提供します。",
+  "author": {
+    "name": "navy1634"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Specialized",
+    "shortDescription": "特定用途のskill",
+    "longDescription": "特定用途向けのskillをまとめています。",
+    "developerName": "navy1634",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "特定用途の作業を支援してください。"
+  }
+}

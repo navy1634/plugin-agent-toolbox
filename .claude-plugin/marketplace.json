@@ -24,9 +24,9 @@
       "version": "0.1.0"
     },
     {
-      "name": "qiita-zenn",
-      "source": "./plugins/agent-toolbox/qiita-zenn",
-      "description": "QiitaとZennの記事作成skillを提供します。",
+      "name": "specialized",
+      "source": "./plugins/agent-toolbox/specialized",
+      "description": "特定用途のskillを提供します。",
       "version": "0.1.0"
     }
   ]
