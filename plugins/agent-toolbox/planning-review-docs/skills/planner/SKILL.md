@@ -1,110 +1,90 @@
 ---
 name: planner
-description: 要件と既存コードを分析し、設計判断、実装手順、テスト戦略、リスク、成功条件を含む実装計画を作成する。
+description: 要件と既存実装を調査し、設計判断、共有契約、依存順、検証戦略、リスクを含む実行可能な実装計画を作成・改訂するときに使う
 ---
 
-## Reference Skills
+# Planner
 
-Consult these skills for domain-specific patterns when planning:
+実装計画は作業項目の一覧ではなく、要件と受入条件を、実装担当者が再設計せずに実行できる契約へ変換する成果物です。planner agent を経由する場合だけでなく、メインセッションが直接計画を作成・更新する場合にも、この契約を適用します。
 
-- `backend-patterns` — FastAPI clean architecture (4-layer), API design, directory structure
-- `terraform` — IaC directory layout, module design, naming conventions, security checks
-- `clickhouse-io` — ClickHouse schema design, query optimization patterns
-- `coding-standards` — Python naming, type hints, immutability requirements
-- `security-review` — Security requirements to factor into design decisions
+## 要件と受入条件の境界
 
-## Role boundary
+- 要件、目的、制約、受入条件は依頼者が所有します。理解確認のために言い換えることはできますが、計画側で追加、緩和、置換しません。
+- 成功条件は要件と受入条件へ追跡できる、観測可能で判定可能な形にします。計画側から提案する成功条件は、確定済みの受入条件と区別します。
+- 調査しても解消できない不明点のうち、選択によって成果物が変わるものだけを未解決事項として扱います。既存コード、設定、文書、履歴から確認できる事実を質問へ戻しません。
+- 要件が矛盾している場合や、必要な契約を一意に定められない場合は、推測で設計を埋めず、確認が必要な一点と選択肢ごとの差を示します。
 
-You own the design and the implementation plan. You do not own the requirements or the acceptance criteria — those belong to the client (the main session), and restating them is how you confirm your understanding, not a licence to change them. If a requirement is contradictory or missing, say so and stop; do not settle it yourself. The criteria you draft under `## Success Criteria` are a proposal the client reviews and finalizes.
+## 調査と根拠
 
-## Responsibilities
+計画を書く前に、対象範囲の現在の実装、テスト、設定、文書、ディレクトリ構成、未コミット差分、関連履歴を確認します。対象技術や作業種別を扱う skill と repository 固有規約がある場合は、それらを設計と検証の根拠にします。
 
-- Analyze requirements and restate them precisely
-- Make architectural and design decisions with documented rationale
-- Break work into ordered, dependency-aware steps
-- Identify risks and define mitigations
-- Define success criteria and test strategy
+調査結果には、確認したファイルや設定と、そこから分かった既存パターン、変更対象、再利用できる境界、外部依存を記録します。確認済みの事実、根拠のある推論、未確認事項を混同しません。既存パターンから外れる設計を採る場合は、その必要性を設計判断として扱います。
 
-## Process
+## 設計判断
 
-### 1. Requirements Clarification
+ADR を作ること自体を採用案の追認に使いません。結論を置く前に、解決する問題、要件と受入条件から導いた評価基準、複数の実行可能な選択肢を調査し、同じ基準で比較します。非自明な判断ごとに、次の順序で記録します。
 
-- Restate requirements in unambiguous terms
-- List assumptions explicitly
-- Identify unknowns that block implementation
+1. 解決する問題と守る制約を示します。
+2. 選択肢を評価する基準と優先順位を定めます。
+3. 複数の現実的な選択肢を調査し、それぞれの根拠、利点、欠点、影響を同じ基準で比較します。
+4. 不採用の選択肢と不採用理由を先に記録します。
+5. 比較結果から採用する決定、根拠、影響、見直し条件を記録します。
 
-### 2. Codebase Analysis
+採用案だけを後付けで正当化したり、実装担当者へ判断を残したりしません。別途 decision record が必要な環境では、[設計判断と decision record](references/decision-records.md) に従います。
 
-- Read existing code to understand current patterns
-- Identify affected files and components
-- Find reusable abstractions
+## 振る舞い変更の共有契約
 
-### 3. Design Decisions
+振る舞いを変更する計画では、テストと実装が互いの成果物から仕様を推測しないよう、実装開始前に次の項目を確定します。
 
-For each non-trivial choice, document:
+- 公開する関数、handler、module、file の名前と配置
+- 引数、戻り値、入力、出力、エラー、状態変化の型と意味
+- API、database、queue、filesystem、cloud service などの外部境界
+- テスト、application source、infrastructure、設定などの書き込み範囲と担当境界
+- 境界間の依存関係、受け渡す値、実行順序、並行実行できる条件
 
-```
-Decision: [what]
-Options:
-- A: [description] -> rejected. Reason: [why]
-- B: [description] -> adopted. Reason: [why]
-```
+Terraform と application source のように技術境界が分かれる場合は、各範囲を別に定義し、独立して進められるか、どちらを先に完了する必要があるかを明記します。
+公開名や型をテスト担当者または実装担当者の推測に任せません。
 
-### 4. Implementation Plan
+## 実装手順
 
-Output a structured plan the Generator can follow step by step:
+手順は依存関係に沿って並べ、各手順に対象ファイル、変更内容、理由、前提となる手順、担当境界、確認方法を記載します。削除、移行、state 変更、外部更新など復旧が難しい操作では、実行条件と戻し方も含めます。
 
-```markdown
-# Plan: [Title]
+「改善する」「整理する」のように完了状態を判定できない指示は使いません。各手順は単独で変更結果を確認でき、後続の担当者が設計をやり直さず実装できる具体性を持たせます。
 
-## Approval
-- [ ] Reviewed and approved by user
+## テストと静的確認の戦略
 
-## Overview
-[2-3 sentences]
+- 受入条件ごとに、どの unit、integration、E2E、静的確認で判定するかを対応付けます。
+- 振る舞い変更では、実装前に失敗を確認するテストまたは同等の RED と、実装後に再実行する範囲を定めます。
+- 文書や設定の変更では、構文、参照、生成結果など、その成果物に適した静的確認を定めます。
+- repository の task runner、CI、既存テスト、対象技術の skill が定める検証経路を優先し、実行する範囲と外部環境でしか確認できない範囲を分けます。
+- 計画のために新しい検証スクリプトを作成または要求しません。既存の検証手段で不足する場合は、不足を未確認事項またはリスクとして記録します。
 
-## Design Decisions
-[Each decision with rationale]
+## リスク、可逆性、未解決事項
 
-## Steps (ordered)
+設計、互換性、data migration、state、security、performance、cost、外部連携、段階的展開への影響を対象範囲に応じて評価します。各リスクには発生条件、影響、緩和策、検知方法を対応付け、必要な場合は rollback または復旧手順を示します。
 
-1. [Step]: [file path]
-   - What: specific action
-   - Why: reason
-   - Test: how to verify
+未解決事項には、解決する担当、必要な証拠、解決期限または実装を止める条件を記録します。実装開始を妨げる未解決事項を、前提や仮定として隠しません。
 
-2. [Step]: [file path]
-   ...
+## 承認とフィードバック
 
-## Test Strategy
-- Unit: [what to test]
-- Integration: [what to test]
+新しい計画の承認状態は未承認のままにします。実装指示、作業再開、計画への修正依頼を承認として扱わず、依頼者が計画全文を確認して明示的に承認するまで、承認済みと記録しません。
 
-## Risks
-- [Risk]: [mitigation]
+既存計画を更新する前に現在のファイルと差分を読み、依頼者の編集、未変更部分、承認状態を保持して対象箇所だけを変更します。具体的な保存先、標準構成、Approval の表記は [計画ファイルの形式](references/plan-format.md) に従います。
 
-## Success Criteria
-- [ ] [Criterion]
-```
+フィードバックを受けた場合は、設計上の問題か実装上の不足かを分けます。設計上の問題なら選択肢、共有契約、手順、リスク、成功条件を再評価し、必要な記録を更新します。実装上の不足なら、設計を不用意に変更せず、影響する手順と契約に限定して修正内容を示します。
 
-## Output
+## 完成条件
 
-Write the plan to `.claude/plan/<slug>.md` where `<slug>` is a short kebab-case name derived from the task (e.g. `add-rate-limiting.md`). This file is the single source of truth passed to Generator and Evaluator.
+計画を完成とする前に、次を確認します。
 
-## Constraints
+- 要件と受入条件が、設計判断、実装手順、検証戦略、成功条件へ追跡できる。
+- 現状調査の根拠と、確認済み・未確認の境界が明示されている。
+- 非自明な選択肢と不採用理由が、採用決定より前に記録されている。
+- 振る舞い変更に必要な共有契約と書き込み範囲が確定している。
+- 手順の依存関係、検証方法、リスク、可逆性、未解決事項が実行可能な粒度で記載されている。
+- 成功条件が観測可能で、承認状態が依頼者の実際の判断と一致している。
 
-- Every step must be independently verifiable
-- No vague instructions ("improve this", "clean up")
-- File paths must be specific
-- Design decisions are final here; Generator does not re-decide
-- Plan for TDD: each step should have a testable outcome
-- This plan requires explicit user approval before Generator proceeds. No implementation starts without approval
+## References
 
-## When Feedback Arrives from Evaluator
-
-If the orchestrator passes Evaluator feedback:
-
-1. Identify root cause of the issue
-2. Determine if it's a design flaw or implementation gap
-3. If design flaw: revise the relevant decision and output an amended plan
-4. If implementation gap: output targeted instructions for Generator to fix
+- [計画ファイルの形式](references/plan-format.md) — 計画を保存し、標準構成、出力先、Approval、既存計画の更新方法を適用するときに読みます。
+- [設計判断と decision record](references/decision-records.md) — 共有 rules や repository 規約が、設計判断を plan とは別の記録にも残すよう求める場合に読みます。

@@ -1,18 +1,18 @@
 {
   "name": "planning-review-docs",
-  "version": "0.1.0",
-  "description": "計画、レビュー、ドキュメント、事後検証のskillを提供します。",
+  "version": "0.2.0",
+  "description": "実装計画、セキュリティレビューのskills",
   "author": {
     "name": "navy1634"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "Planning, Review & Docs",
-    "shortDescription": "計画、レビュー、文書化、事後検証",
-    "longDescription": "計画、レビュー、ドキュメント整備、事後検証向けのskillをまとめています。",
+    "displayName": "Planning & Security Review",
+    "shortDescription": "実装計画とセキュリティレビュー",
+    "longDescription": "実装計画、セキュリティレビューのskills",
     "developerName": "navy1634",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "計画やレビュー、ドキュメント整備を支援してください。"
+    "defaultPrompt": "実装計画やセキュリティレビューを支援してください。"
   }
 }

@@ -1,532 +1,81 @@
 ---
 name: security-review
-description: 認証の追加、ユーザー入力の処理、シークレットの操作、API エンドポイントの作成、または支払い/機密機能の実装時に使用。包括的なセキュリティチェックリストとパターンを提供。
+description: 認証・認可、外部入力、機密情報、決済、第三者連携、または公開境界の脅威面が変わる設計・実装・レビューで使う。
 ---
 
-# Security Review Skill
+# Security Review
 
-This skill ensures all code follows security best practices and identifies potential vulnerabilities.
+この skill は、変更によって増減する脅威面と信頼境界を明らかにし、必要な安全要件を設計・実装・レビューへ反映するために使います。コードだけでなく、設定、IaC、CI、データフロー、外部サービス連携も対象にします。
 
-## When to Activate
+## 適用条件
 
-- Implementing authentication or authorization
-- Handling user input or file uploads
-- Creating new API endpoints
-- Working with secrets or credentials
-- Implementing payment features
-- Storing or transmitting sensitive data
-- Integrating third-party APIs
+次のいずれかに該当する変更では、この skill を使います。明示的なセキュリティレビュー、脅威分析、インシデント対応を求められた場合も対象です。
 
-## Security Checklist
+- 認証、認可、セッション、token、role、tenant、権限を追加または変更する場合。
+- API、Web UI、Webhook、ファイル upload、CLI、queue などの外部入力や公開境界を追加または変更する場合。
+- secret、credential、秘密鍵、個人情報、決済情報、その他の機密データを扱う場合。
+- 決済、残高、所有権、削除、権限変更など、損失や権限逸脱につながる操作を追加または変更する場合。
+- 依存関係、第三者 API、外部 network、redirect、SSRF の可能性、データ保存先、暗号化、backup、監査を追加または変更する場合。
+- Terraform、AWS、GitHub Actions などで公開範囲、IAM、credential、実行権限、secret、state、artifact の扱いを変更する場合。provider や製品固有の設定は対応する skill も読みます。
 
-### 1. Secrets Management
+## この skill が定めること
 
-#### ❌ NEVER Do This
+### 脅威面と信頼境界
 
-```typescript
-const apiKey = "sk-proj-xxxxx"  // Hardcoded secret
-const dbPassword = "password123" // In source code
-```
+変更前に、保護対象の資産、利用者・管理者・サービスなどの主体、外部入力、外部出力、保存先、外部サービス、権限境界を洗い出します。信頼できない値を client、URL、UI、network 内部、既存 database などの見かけだけで信頼せず、境界ごとに検証と認可を置きます。
 
-#### ✅ ALWAYS Do This
+データフローでは、どの主体がどの資産に対してどの操作を行うか、どこで権限が変わるか、失敗時に何が残るかを追跡します。対象外にした境界は、対象外とした理由を記録します。
 
-```typescript
-const apiKey = process.env.OPENAI_API_KEY
-const dbUrl = process.env.DATABASE_URL
+### 横断的な安全契約
 
-// Verify secrets exist
-if (!apiKey) {
-  throw new Error('OPENAI_API_KEY not configured')
-}
-```
+- 外部から来る入力は不正値を前提にし、境界で型、形式、サイズ、範囲、許可値を検証してから query、command、HTML、path、外部 API へ渡します。出力先の文脈に応じた encoding または sanitization も行います。
+- 保護された操作は server side で主体、資源、操作の組み合わせを認可し、最小権限と default deny を基本にします。UI や URL を隠すだけで認可を済ませません。
+- secret、credential、秘密鍵、token、機密データを source、設定、fixture、画像、ログ、error、response、artifact、履歴へ転載しません。保存する機密データは、保存先、保持期間、暗号化、アクセス主体、削除、backup、rotation を決めます。
+- 外部依存と外部通信は、許可する source、endpoint、権限、TLS、timeout、retry、response の検証を決め、再現可能な依存解決と監査可能な変更履歴を保ちます。
+- state-changing な処理では、再送、replay、二重実行、競合、部分失敗を考慮し、必要に応じて rate limit、timeout、idempotency、監査イベント、復旧手順を設計します。
+- 利用者向けの response は内部構造、stack trace、SQL、secret、内部 URL を漏らさず、server log と監査記録も機密値をマスキングします。
 
-#### Verification Steps
+## 作業手順
 
-- [ ] No hardcoded API keys, tokens, or passwords
-- [ ] All secrets in environment variables
-- [ ] `.env.local` in .gitignore
-- [ ] No secrets in git history
-- [ ] Production secrets in hosting platform (Vercel, Railway)
+1. 要件、受入条件、既存の実装と設定を読み、資産、主体、trust boundary、data flow、変更による threat surface を記録します。
+2. 認証認可、入力と Web、secret と data、依存と response、Solana のうち、変更に関係する reference だけを読みます。該当しない領域も、対象外とした理由を計画またはレビュー記録へ残します。
+3. 脅威または misuse case ごとに、影響、発生条件、緩和策、緩和策の対象ファイル・component、失敗時の挙動、検証方法を定義します。既存の要件や repository 方針で決まらない分岐を推測しません。
+4. 正常系だけでなく、境界値、不正入力、権限不足、期限切れ、再送、依存障害、秘密情報の誤出力など、観測可能な安全性のテストまたは静的確認を受入条件へ対応づけます。検証スクリプトを新設して標準 tooling の代替にしてはいけません。
+5. 実装・レビュー後に、実行した確認と未確認の範囲を分けて記録し、残余リスク、例外承認、risk owner、期限または見直し条件を更新します。
 
-### 2. Input Validation
+## 計画・受入契約
 
-#### Always Validate User Input
+セキュリティに関係する計画または work order には、少なくとも次の要素を含めます。planner を経由しない作業では、同じ情報を作業指示やレビュー記録に置きます。
 
-```typescript
-import { z } from 'zod'
+- 保護対象の資産と機密度、関係する主体、trust boundary、data flow、および変更後に増える公開面。
+- 認証、認可、入力、secret、機密データ、出力、依存、外部通信、監査、monitoring、復旧のうち、該当する安全要件と対象範囲。
+- 各安全要件を満たす component、設定、公開契約、失敗時の挙動、担当する書き込み範囲。
+- 脅威・misuse case、影響、緩和策、テストまたは静的確認、確認できない前提。
+- 未解決のリスク、採用した例外、risk owner、対応期限または再評価条件。
 
-// Define validation schema
-const CreateUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-  age: z.number().int().min(0).max(150)
-})
+受入条件は「安全そうである」といった印象ではなく、対象となる control とその証拠で判定できる形にします。重大な未解決リスク、未承認の例外、根拠のない安全宣言が残る場合は完了扱いにしません。低減できない残余リスクを受け入れる場合も、既存の承認方針に従い、受入者と期限を明記します。
 
-// Validate before processing
-export async function createUser(input: unknown) {
-  try {
-    const validated = CreateUserSchema.parse(input)
-    return await db.users.create(validated)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { success: false, errors: error.errors }
-    }
-    throw error
-  }
-}
-```
+## 完了条件
 
-#### File Upload Validation
+- 変更に関係する threat surface と trust boundary を記録し、各対象領域の reference または対象外の理由を確認できます。
+- 定義した安全要件、認証認可、入力検証、secret／data lifecycle、外部依存、response、監査などの control に対して、実装と検証の証拠があります。
+- source、設定、テスト、ログ、response、artifact、履歴に secret または不要な機密情報を露出していません。
+- 重大な未解決リスクや未承認の例外がなく、残余リスクと未確認範囲が記録されています。
+- プロジェクトで定義された既存の test、lint、security check、plan、review の結果を、対象全体に対する証拠として報告しています。独自の検証スクリプトを追加して完了条件を満たしたことにしてはいけません。
 
-```typescript
-function validateFileUpload(file: File) {
-  // Size check (5MB max)
-  const maxSize = 5 * 1024 * 1024
-  if (file.size > maxSize) {
-    throw new Error('File too large (max 5MB)')
-  }
+実際の secret 漏えい、認証回避、重大な権限逸脱を発見した場合は、その経路の継続を止め、client または既存の security incident 手順へ直ちに返します。credential の revoke／rotation、影響範囲の封じ込め、証拠保全、利用者への連絡などの外部操作は、承認された運用手順に従って実施します。
 
-  // Type check
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid file type')
-  }
+## Reference の選択
 
-  // Extension check
-  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif']
-  const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0]
-  if (!extension || !allowedExtensions.includes(extension)) {
-    throw new Error('Invalid file extension')
-  }
+| 変更の境界 | 読む reference |
+| --- | --- |
+| secret、credential、個人情報、決済情報、保存・ログ・backup | [secrets-and-data.md](references/secrets-and-data.md) |
+| 外部入力、API、Web、upload、SQL、HTML、CSRF、rate limit、SSRF | [input-and-web.md](references/input-and-web.md) |
+| 認証、session、token、role、permission、tenant、RLS | [authentication-and-authorization.md](references/authentication-and-authorization.md) |
+| 依存、第三者 API、response、error、監査、monitoring、incident | [dependencies-and-response.md](references/dependencies-and-response.md) |
 
-  return true
-}
-```
+複数の境界にまたがる場合は、該当する reference をすべて読みます。reference は具体的な脅威、例、検査項目を定めるものであり、横断的な資産・境界・証拠・残余リスクの判断を省略する理由にはなりません。
 
-#### Verification Steps
+## 他 skill との分担
 
-- [ ] All user inputs validated with schemas
-- [ ] File uploads restricted (size, type, extension)
-- [ ] No direct use of user input in queries
-- [ ] Whitelist validation (not blacklist)
-- [ ] Error messages don't leak sensitive info
-
-### 3. SQL Injection Prevention
-
-#### ❌ NEVER Concatenate SQL
-
-```typescript
-// DANGEROUS - SQL Injection vulnerability
-const query = `SELECT * FROM users WHERE email = '${userEmail}'`
-await db.query(query)
-```
-
-#### ✅ ALWAYS Use Parameterized Queries
-
-```typescript
-// Safe - parameterized query
-const { data } = await supabase
-  .from('users')
-  .select('*')
-  .eq('email', userEmail)
-
-// Or with raw SQL
-await db.query(
-  'SELECT * FROM users WHERE email = $1',
-  [userEmail]
-)
-```
-
-#### Verification Steps
-
-- [ ] All database queries use parameterized queries
-- [ ] No string concatenation in SQL
-- [ ] ORM/query builder used correctly
-- [ ] Supabase queries properly sanitized
-
-### 4. Authentication & Authorization
-
-#### JWT Token Handling
-
-```typescript
-// ❌ WRONG: localStorage (vulnerable to XSS)
-localStorage.setItem('token', token)
-
-// ✅ CORRECT: httpOnly cookies
-res.setHeader('Set-Cookie',
-  `token=${token}; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`)
-```
-
-#### Authorization Checks
-
-```typescript
-export async function deleteUser(userId: string, requesterId: string) {
-  // ALWAYS verify authorization first
-  const requester = await db.users.findUnique({
-    where: { id: requesterId }
-  })
-
-  if (requester.role !== 'admin') {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 403 }
-    )
-  }
-
-  // Proceed with deletion
-  await db.users.delete({ where: { id: userId } })
-}
-```
-
-#### Row Level Security (Supabase)
-
-```sql
--- Enable RLS on all tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
--- Users can only view their own data
-CREATE POLICY "Users view own data"
-  ON users FOR SELECT
-  USING (auth.uid() = id);
-
--- Users can only update their own data
-CREATE POLICY "Users update own data"
-  ON users FOR UPDATE
-  USING (auth.uid() = id);
-```
-
-#### Verification Steps
-
-- [ ] Tokens stored in httpOnly cookies (not localStorage)
-- [ ] Authorization checks before sensitive operations
-- [ ] Row Level Security enabled in Supabase
-- [ ] Role-based access control implemented
-- [ ] Session management secure
-
-### 5. XSS Prevention
-
-#### Sanitize HTML
-
-```typescript
-import DOMPurify from 'isomorphic-dompurify'
-
-// ALWAYS sanitize user-provided HTML
-function renderUserContent(html: string) {
-  const clean = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p'],
-    ALLOWED_ATTR: []
-  })
-  return <div dangerouslySetInnerHTML={{ "{{" }} __html: clean {{ "}}" }} />
-}
-```
-
-#### Content Security Policy
-
-```typescript
-// next.config.js
-const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: `
-      default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline';
-      style-src 'self' 'unsafe-inline';
-      img-src 'self' data: https:;
-      font-src 'self';
-      connect-src 'self' https://api.example.com;
-    `.replace(/\s{2,}/g, ' ').trim()
-  }
-]
-```
-
-#### Verification Steps
-
-- [ ] User-provided HTML sanitized
-- [ ] CSP headers configured
-- [ ] No unvalidated dynamic content rendering
-- [ ] React's built-in XSS protection used
-
-### 6. CSRF Protection
-
-#### CSRF Tokens
-
-```typescript
-import { csrf } from '@/lib/csrf'
-
-export async function POST(request: Request) {
-  const token = request.headers.get('X-CSRF-Token')
-
-  if (!csrf.verify(token)) {
-    return NextResponse.json(
-      { error: 'Invalid CSRF token' },
-      { status: 403 }
-    )
-  }
-
-  // Process request
-}
-```
-
-#### SameSite Cookies
-
-```typescript
-res.setHeader('Set-Cookie',
-  `session=${sessionId}; HttpOnly; Secure; SameSite=Strict`)
-```
-
-#### Verification Steps
-
-- [ ] CSRF tokens on state-changing operations
-- [ ] SameSite=Strict on all cookies
-- [ ] Double-submit cookie pattern implemented
-
-### 7. Rate Limiting
-
-#### API Rate Limiting
-
-```typescript
-import rateLimit from 'express-rate-limit'
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
-  message: 'Too many requests'
-})
-
-// Apply to routes
-app.use('/api/', limiter)
-```
-
-#### Expensive Operations
-
-```typescript
-// Aggressive rate limiting for searches
-const searchLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute
-  message: 'Too many search requests'
-})
-
-app.use('/api/search', searchLimiter)
-```
-
-#### Verification Steps
-
-- [ ] Rate limiting on all API endpoints
-- [ ] Stricter limits on expensive operations
-- [ ] IP-based rate limiting
-- [ ] User-based rate limiting (authenticated)
-
-### 8. Sensitive Data Exposure
-
-#### Logging
-
-```typescript
-// ❌ WRONG: Logging sensitive data
-console.log('User login:', { email, password })
-console.log('Payment:', { cardNumber, cvv })
-
-// ✅ CORRECT: Redact sensitive data
-console.log('User login:', { email, userId })
-console.log('Payment:', { last4: card.last4, userId })
-```
-
-#### Error Messages
-
-```typescript
-// ❌ WRONG: Exposing internal details
-catch (error) {
-  return NextResponse.json(
-    { error: error.message, stack: error.stack },
-    { status: 500 }
-  )
-}
-
-// ✅ CORRECT: Generic error messages
-catch (error) {
-  console.error('Internal error:', error)
-  return NextResponse.json(
-    { error: 'An error occurred. Please try again.' },
-    { status: 500 }
-  )
-}
-```
-
-#### Verification Steps
-
-- [ ] No passwords, tokens, or secrets in logs
-- [ ] Error messages generic for users
-- [ ] Detailed errors only in server logs
-- [ ] No stack traces exposed to users
-
-### 9. Blockchain Security (Solana)
-
-#### Wallet Verification
-
-```typescript
-import { verify } from '@solana/web3.js'
-
-async function verifyWalletOwnership(
-  publicKey: string,
-  signature: string,
-  message: string
-) {
-  try {
-    const isValid = verify(
-      Buffer.from(message),
-      Buffer.from(signature, 'base64'),
-      Buffer.from(publicKey, 'base64')
-    )
-    return isValid
-  } catch (error) {
-    return false
-  }
-}
-```
-
-#### Transaction Verification
-
-```typescript
-async function verifyTransaction(transaction: Transaction) {
-  // Verify recipient
-  if (transaction.to !== expectedRecipient) {
-    throw new Error('Invalid recipient')
-  }
-
-  // Verify amount
-  if (transaction.amount > maxAmount) {
-    throw new Error('Amount exceeds limit')
-  }
-
-  // Verify user has sufficient balance
-  const balance = await getBalance(transaction.from)
-  if (balance < transaction.amount) {
-    throw new Error('Insufficient balance')
-  }
-
-  return true
-}
-```
-
-#### Verification Steps
-
-- [ ] Wallet signatures verified
-- [ ] Transaction details validated
-- [ ] Balance checks before transactions
-- [ ] No blind transaction signing
-
-### 10. Dependency Security
-
-#### Regular Updates
-
-```bash
-# Check for vulnerabilities
-npm audit
-
-# Fix automatically fixable issues
-npm audit fix
-
-# Update dependencies
-npm update
-
-# Check for outdated packages
-npm outdated
-```
-
-#### Lock Files
-
-```bash
-# ALWAYS commit lock files
-git add package-lock.json
-
-# Use in CI/CD for reproducible builds
-npm ci  # Instead of npm install
-```
-
-#### Verification Steps
-
-- [ ] Dependencies up to date
-- [ ] No known vulnerabilities (npm audit clean)
-- [ ] Lock files committed
-- [ ] Dependabot enabled on GitHub
-- [ ] Regular security updates
-
-## Security Testing
-
-### Automated Security Tests
-
-```typescript
-// Test authentication
-test('requires authentication', async () => {
-  const response = await fetch('/api/protected')
-  expect(response.status).toBe(401)
-})
-
-// Test authorization
-test('requires admin role', async () => {
-  const response = await fetch('/api/admin', {
-    headers: { Authorization: `Bearer ${userToken}` }
-  })
-  expect(response.status).toBe(403)
-})
-
-// Test input validation
-test('rejects invalid input', async () => {
-  const response = await fetch('/api/users', {
-    method: 'POST',
-    body: JSON.stringify({ email: 'not-an-email' })
-  })
-  expect(response.status).toBe(400)
-})
-
-// Test rate limiting
-test('enforces rate limits', async () => {
-  const requests = Array(101).fill(null).map(() =>
-    fetch('/api/endpoint')
-  )
-
-  const responses = await Promise.all(requests)
-  const tooManyRequests = responses.filter(r => r.status === 429)
-
-  expect(tooManyRequests.length).toBeGreaterThan(0)
-})
-```
-
-## Pre-Deployment Security Checklist
-
-Before ANY production deployment:
-
-- [ ] **Secrets**: No hardcoded secrets, all in env vars
-- [ ] **Input Validation**: All user inputs validated
-- [ ] **SQL Injection**: All queries parameterized
-- [ ] **XSS**: User content sanitized
-- [ ] **CSRF**: Protection enabled
-- [ ] **Authentication**: Proper token handling
-- [ ] **Authorization**: Role checks in place
-- [ ] **Rate Limiting**: Enabled on all endpoints
-- [ ] **HTTPS**: Enforced in production
-- [ ] **Security Headers**: CSP, X-Frame-Options configured
-- [ ] **Error Handling**: No sensitive data in errors
-- [ ] **Logging**: No sensitive data logged
-- [ ] **Dependencies**: Up to date, no vulnerabilities
-- [ ] **Row Level Security**: Enabled in Supabase
-- [ ] **CORS**: Properly configured
-- [ ] **File Uploads**: Validated (size, type)
-- [ ] **Wallet Signatures**: Verified (if blockchain)
-
-## Security Response Protocol
-
-セキュリティ問題が発見された場合:
-
-1. STOP immediately
-2. Use **evaluator** agent (or `/code-review` command)
-3. Fix CRITICAL issues before continuing
-4. Rotate any exposed secrets
-5. Review entire codebase for similar issues
-
-## Resources
-
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [Next.js Security](https://nextjs.org/docs/security)
-- [Supabase Security](https://supabase.com/docs/guides/auth)
-- [Web Security Academy](https://portswigger.net/web-security)
+Terraform、AWS、GitHub Actions などの provider・製品・tool 固有の権限、設定、state、workflow、実行コマンドは、それぞれの skill を正とします。security-review はそれらの詳細を複製せず、脅威面、trust boundary、最小権限、secret／data lifecycle、検証証拠、残余リスクが計画と受入条件に含まれているかを確認します。テストの構成や project の DoD は、該当する test／coding skill と repository の task runner に従います。
