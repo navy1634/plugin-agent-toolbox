@@ -5,65 +5,46 @@ description: ユーザーからの指摘・修正を受けた後、同じ失敗�
 
 # Postmortem Skill
 
-Turn a single correction into a permanent behavior change. The goal is not to apologize or summarize the mistake — it is to find the exact governance artifact that should have prevented it, and edit that artifact.
+Use this skill when a correction exposes a judgment or instruction failure and the goal is to prevent recurrence. Convert the evidence into a durable behavior change in the correct source of truth. A postmortem is not an apology, an incident summary, or a token-, byte-, or line-count optimization exercise.
+
+References supplement this contract with target-specific placement checks and reporting format. They are not a substitute for the generic requirements below, and the existence of a reference does not justify omitting a requirement needed to perform the work.
 
 ## When to Activate
 
-- The user points out a mistake and then asks to prevent recurrence ("二度と起きないように", "同じミスをしないように", "rulesを直して")
-- Explicit `/postmortem` invocation right after a correction
+- The user points out a mistake and then asks to prevent recurrence, such as "二度と起きないように", "同じミスをしないように", or "rulesを直して"
+- The user explicitly invokes `/postmortem` immediately after a correction
 
-Do not activate on a plain bug fix or a one-off technical workaround with no judgment failure involved — that belongs to the `learn` skill/command instead.
+Do not activate for a plain bug fix or a one-off technical workaround with no judgment failure. That belongs to the appropriate implementation or learning workflow.
+
+## Required Contract
+
+- The correction, existing instructions, current files, and current diff are evidence. Inspect them before editing; do not infer the source of truth from a familiar path, a file name, or the fact that a rule appears to exist.
+- Separate confirmed facts, the expected judgment, the actual judgment or output, the root cause, and the recurrence condition. The root cause must explain why the available control failed or why no control existed, not merely restate the wrong output.
+- Classify the cause as information that was available but not used, an existing rule that was not followed, or a genuinely new judgment for which no rule existed. Record the classification and the evidence for it.
+- Derive a standing behavior that prevents the recurrence without generalizing a project-specific fact into a universal rule. Keep generic operating contracts in the applicable skill or shared rule and concrete domain, provider, repository, or tool facts in the appropriate reference or project context.
+- Search all plausible existing sources before writing. Select the one source of truth that owns the behavior, extend a close existing rule, and do not add duplicates, contradictory wording, or a new skill for a single incident. Memory alone is not a durable governance change.
+- Preserve every condition, exception, example, path, and acceptance requirement needed to execute the behavior. Reduce accidental prose and duplication, but never remove necessary elements to meet a character, byte, or line target.
+- Complete the analysis, placement decision, and full content of the change before moving to verification. Do not declare the postmortem complete from a partial file, a reference link, or a passing check while required content is still missing.
+- Do not create or request a custom validation script to compensate for missing tooling. After the content and placement are complete, use existing project checks when they exist and report checks that were not applicable or could not run.
+- Keep the edit within the selected source-of-truth boundary, preserve unrelated user changes and existing comments, and match the target's language, structure, and conventions. Do not use destructive or lossy file operations.
+
+When the selected artifact concerns planner output, preserve the planner-owned plan path, ADR ownership, and user-owned approval state. Never move a plan to a legacy path, change `Approval` from `[ ]` to `[x]`, or claim that a plan was approved. The target-specific checks and exact path rules are in [Target checks](references/target-checks.md).
 
 ## Process
 
-1. **Root cause analysis** — Identify what was actually misjudged, not just what output was wrong. Distinguish:
-   - Information was available but not used (read the code, skipped verifying what it implied)
-   - A rule/instruction existed but was not followed
-   - No rule existed and the judgment call was genuinely novel
-2. **Classify the lesson** using the table below.
-3. **Search before writing** — grep the candidate file(s) for related wording. Never add a rule that duplicates or contradicts an existing one; extend the existing bullet instead of appending a near-duplicate.
-4. **Edit with minimum diff** — add 1–3 lines to an existing section that matches the topic. Only create a new section/file if nothing existing fits. Do not write a new essay or restate the incident narrative in the rule file — rules describe the standing behavior, not the story.
-5. **Emit a decision log** per this repo's 判断ログ format (see AGENTS.md), stating which artifact was chosen and why.
-6. **Report** the concrete diff to the user — file, line, what changed.
+1. Collect the correction, the expected behavior, the actual behavior, the affected artifacts, and the current repository or instruction-source state.
+2. Reconstruct the root cause and recurrence condition using the required distinctions above. Identify the control that should have caught the failure.
+3. Classify the lesson and choose one source of truth. Use the placement decision reference for the target-specific boundary.
+4. Define the standing rule or checklist change, including its scope, trigger, owner, exceptions, and how its presence or behavior can be checked. Keep all required elements even when the resulting change is longer than the original.
+5. Edit only the selected artifact with a targeted patch. For planner output, follow the target-specific checks in the target reference.
+6. Once the content is complete, perform applicable existing checks and record the evidence, unrun checks, and remaining uncertainty in the report format.
 
-## Placement Decision Table
+## Completion Contract
 
-| 教訓の性質 | 配置先 | 判断基準 |
-|---|---|---|
-| 判断プロセス・検証習慣の誤り（どのプロジェクトでも起こりうる） | `~/.claude/rules/*.md`（グローバルルール） | 「条件分岐の由来を追わず表面パターンマッチで結論づけた」のように、コードの内容に依存しない汎用的な思考の誤り |
-| このプロジェクト固有のドメイン知識・設計・運用フローの誤解 | プロジェクトの `CLAUDE.md`（contexts） | 「このコードベースのある関数/設定が実際にはどう振る舞うか」を誤解していた場合 |
-| 特定のskillが規定する作業手順・チェック項目の漏れ | 該当する既存skillの `SKILL.md` | terraform/security-review等、そのskillを呼び出す作業で毎回起こりうる手順・チェック漏れだった場合。新規skill作成ではなく既存skillへの追記に限る |
-| 再利用可能な技術的パターン（エラー解決法、ワークアラウンド等） | `learn` スキル/コマンドに委譲 | 判断ミスではなく、技術的な解法自体が新規知見の場合 |
+Do not report completion until the report can identify the root cause, recurrence condition, classification, selected source of truth, reason for placement, concrete change, and verification status. The change must preserve the required elements and target conventions, avoid duplicate or contradictory rules, and leave planner approval and path ownership untouched. A local or static check does not prove an external, generated, CI, or deployed state; report those boundaries separately.
 
-該当箇所は rules・contexts（CLAUDE.md/AGENTS.md）・既存skillの中から、内容が最もよく当てはまるものを選ぶ。複数に該当する場合は重複させず、それぞれ別の言葉で該当箇所にのみ書く。memoryへの記録は選択肢にしない（理由は Guardrails 参照）。
+## References
 
-## Chezmoi-managed files (CRITICAL)
-
-Chezmoi management is a property of the target file under `~/.claude/`, not of whichever project repo you happen to be working in — the chezmoi source repo can live anywhere on disk, unrelated to the current project. Never infer chezmoi status from "is the current repo chezmoi's source directory"; that repo-level proxy check gives a false negative whenever the chezmoi dotfiles repo is separate from the project you're currently in.
-
-Before editing anything under `~/.claude/`, check the target file directly: run `chezmoi source-path <target-file>` (e.g. `chezmoi source-path ~/.claude/rules/philosophy.md`). If it resolves to a path:
-
-- **Never edit the real file under `~/.claude/`** (`~/.claude/rules/*.md`, `~/.claude/CLAUDE.md`, `~/.claude/skills/*/SKILL.md`, etc.). It is generated by `chezmoi apply`; a direct edit there is either overwritten on the next apply or silently diverges from source — this is the exact failure this skill exists to prevent.
-- Edit the source of truth instead:
-  - Global rules (`~/.claude/rules/*.md`) → `.chezmoitemplates/agents/rules/*.md`
-  - Global CLAUDE.md skills table / core sections → `.chezmoitemplates/agents/AGENTS.md`
-  - Existing skill's `SKILL.md` → `.chezmoitemplates/agents/skills/<name>/SKILL.md` (never the generated `dot_claude/skills/<name>/SKILL.md.tmpl`, which is just a one-line template reference)
-- After editing, run `chezmoi diff -- <target-file>` first to confirm that specific file's diff is now clean, then run a full `chezmoi diff`. The full diff must show only the intended change — if it also shows unrelated content already present in the real file but missing from source, that is pre-existing drift from a past direct edit; report it to the user instead of silently ignoring or silently folding it in.
-
-If `chezmoi source-path` fails to resolve (file not managed by chezmoi), edit the real file directly — there is no source/real-file split to worry about.
-
-## Writing Conventions by Target
-
-Match each artifact's existing language and tone; do not introduce a new convention:
-
-- `~/.claude/rules/*.md` (or its chezmoi source under `.chezmoitemplates/agents/rules/`): English body, in the file's existing heading/bullet style.
-- `CLAUDE.md` / `AGENTS.md` (contexts): Japanese, keigo, natural phrasing. Follow this repo's 日本語の文体 rules — no noun-only bullet chains, no `:` as a separator outside a 判断ログ block, no subjectless passive voice.
-- An existing skill's `SKILL.md`: `description` frontmatter in Japanese, body in English, matching that skill's existing structure.
-
-## Guardrails
-
-- Don't create a *new* skill file for a single incident. Editing an *existing* skill's checklist/process is in scope when the lesson is specific to that skill's domain; authoring a brand-new skill is not — see `continuous-learning` for that.
-- Don't settle for a memory entry. Memory is scoped to this repo/project and will not surface in other projects — a lesson worth a postmortem must land in a rule or CLAUDE.md file that Claude Code actually loads every session.
-- Don't duplicate an existing rule. If a close match exists, tighten or extend it instead of adding a parallel bullet.
-- Preserve the target file's existing conventions (heading level, bullet style, language, tone).
-- Keep the addition proportional — a missed verification step is one bullet, not a new subsection.
+- [Placement](references/placement.md) — classify the lesson and select the owning governance artifact without duplicating it.
+- [Target checks](references/target-checks.md) — inspect planner plans and ADRs without changing their ownership or approval state.
+- [Report](references/report.md) — record the decision log, concrete diff, evidence, and unresolved items.

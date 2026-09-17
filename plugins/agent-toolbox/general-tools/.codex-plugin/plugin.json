@@ -1,7 +1,7 @@
 {
   "name": "general-tools",
-  "version": "0.1.0",
-  "description": "AWS CLI、GitHub Actions、Terraformなどの汎用ツールskillを提供します。",
+  "version": "0.2.0",
+  "description": "AWS CLI、GitHub Actions、Terraformのskills",
   "author": {
     "name": "navy1634"
   },
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "General Tools",
     "shortDescription": "AWS CLI、GitHub Actions、Terraformなど",
-    "longDescription": "開発や運用で使う汎用ツールのskillをまとめています。",
+    "longDescription": "AWS CLI、GitHub Actions、Terraformのskills",
     "developerName": "navy1634",
     "category": "Productivity",
     "capabilities": [],

@@ -8,26 +8,26 @@
     {
       "name": "planning-review-docs",
       "source": "./plugins/agent-toolbox/planning-review-docs",
-      "description": "計画、レビュー、ドキュメント、事後検証のskillを提供します。",
-      "version": "0.1.0"
+      "description": "実装計画、セキュリティレビューのskills",
+      "version": "0.2.0"
     },
     {
       "name": "general-tools",
       "source": "./plugins/agent-toolbox/general-tools",
-      "description": "AWS CLI、GitHub Actions、Terraformなどの汎用ツールskillを提供します。",
-      "version": "0.1.0"
+      "description": "AWS CLI、GitHub Actions、Terraformのskills",
+      "version": "0.2.0"
     },
     {
       "name": "coding-workflow",
       "source": "./plugins/agent-toolbox/coding-workflow",
-      "description": "コーディングと開発workflowのskillを提供します。",
-      "version": "0.1.0"
+      "description": "実装、コーディング規約、テスト、開発workflow向けのskills",
+      "version": "0.2.0"
     },
     {
       "name": "specialized",
       "source": "./plugins/agent-toolbox/specialized",
-      "description": "特定用途のskillを提供します。",
-      "version": "0.1.0"
+      "description": "事後検証、技術記事作成のskills",
+      "version": "0.2.0"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "specialized",
-  "version": "0.1.0",
-  "description": "特定用途のskillを提供します。",
+  "version": "0.2.0",
+  "description": "事後検証、技術記事作成のskills",
   "author": {
     "name": "navy1634"
   },
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Specialized",
     "shortDescription": "特定用途のskill",
-    "longDescription": "特定用途向けのskillをまとめています。",
+    "longDescription": "事後検証、技術記事作成のskills",
     "developerName": "navy1634",
     "category": "Productivity",
     "capabilities": [],

@@ -1,7 +1,7 @@
 {
   "name": "coding-workflow",
-  "version": "0.1.0",
-  "description": "コーディングと開発workflowのskillを提供します。",
+  "version": "0.2.0",
+  "description": "実装、コーディング規約、テスト、開発workflow向けのskills",
   "author": {
     "name": "navy1634"
   },
@@ -9,10 +9,10 @@
   "interface": {
     "displayName": "Coding & Workflow",
     "shortDescription": "コーディングと開発workflow",
-    "longDescription": "実装、コーディング規約、テスト、開発workflow向けのskillをまとめています。",
+    "longDescription": "実装、コーディング規約、テスト、開発workflow向けのskills",
     "developerName": "navy1634",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "コーディングと開発workflowを支援してください。"
+    "defaultPrompt": "コーディングと開発workflowを支援してください"
   }
 }

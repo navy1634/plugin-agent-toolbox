@@ -1,664 +1,129 @@
 ---
 name: coding-standards
-description: Python 3.12+ 開発向けのコーディング標準、ベストプラクティス、およびパターン。PEP 8、ruff、mypy 準拠。
+description: コードの実装・レビュー、またはリポジトリ README の作成・更新で、共通の構造、命名、可読性、source of truth を判断するときに使う。
+metadata:
+  short-description: 言語共通のコーディング規約
 ---
 
-# Python Coding Standards & Best Practices
+# Coding Standards
 
-Python 3.12+ でのコーディング標準。
+## 適用条件
 
-## Code Quality Principles
+コードの構造、命名、責務分離、型で表現できる制約、例外処理、可読性、安全性、テスト可能性を設計またはレビューするときに使います。リポジトリ README を新設・更新するときも、読者と配置階層、source of truth、実行可能な手順、リンク、例の整合性をこの skill の共通契約として扱います。言語固有の規約だけが必要な場合は、その言語の reference だけを読みます。
 
-### 1. Readability First（可読性優先）
+## 基本方針
 
-- Code is read more than written
-- Clear variable and function names
-- Self-documenting code preferred over comments
-- Consistent formatting (black, ruff)
+- 可読性を優先し、書く量より読む人が意図を追えることを重視する。名前と構造で意図を表し、コードから分からない理由だけをコメントに残す。
+- KISS を守り、動作に必要な最も単純な構造を選ぶ。過剰な抽象化、早すぎる最適化、巧妙で読みにくい実装を避ける。
+- DRY は同じ知識が複数箇所で変更される場合に適用し、偶然似ている処理を無理に共通化しない。
+- YAGNI に従い、要求されていない機能や将来のためだけの拡張点を追加しない。必要になった時点で小さく拡張する。
+- 変更前に対象ファイルの周辺コードと既存のプロジェクト規約を読み、命名、構造、例外処理、コメント形式、依存境界を合わせる。既存パターンを確認せずに独自の構造を追加しない。
+- 既存の formatter、linter、型検査、task runner の設定を正本とする。formatter が決める改行、インデント、空白をエージェントの判断で固定・変更せず、手動の整形や行幅の規則を追加しない。
+- コードの構造と型で表現できる制約を優先し、非自明な理由や制約だけをコメントに残す。
+- 既存コメントは依頼がない限り削除・翻訳・書き換えをしない。新しいコメント、docstring、ドキュメントは日本語で記述し、日本語文末に `。` を付けない。コードの言い換えやツール名だけのコメントは追加しない。
+- 個人の規約や閾値は、適用条件と例外を保ったまま参照する。一般論を新しい規則として追加せず、例外を選ぶ場合は理由と影響範囲を明記する。
+- 変更に対応するテストと検証方法を確認する。テストは仕様、受入条件、公開契約へ依存させ、実装の現在挙動や private な構造を期待値の根拠にしない。
+- lint、format、型検査、テストはプロジェクトの task runner 経由で実行する。task runner がない場合は作業指示に定義された静的検査を使い、標準ツールを直接呼ぶための新しいスクリプトや設定を推測して追加しない。
+- 変更は依頼された範囲に限定し、未コミットの他者の差分を上書き・巻き戻ししない。必要な変更を byte 数や行数だけを理由に削除しない。
+- README のコマンド、version、環境変数、コード例は、task 定義、設定、metadata、environment example、公開 API などの source of truth と一致させます。実値や秘密情報、未確認の外部状態を記載しません。
+- README は読者と配置階層に合う責務だけを持たせ、個別 API や Git の操作規則を重複させず、必要な詳細へリンクします。
 
-### 2. KISS (Keep It Simple, Stupid)
+## Naming
 
-- Simplest solution that works
-- Avoid over-engineering
-- No premature optimization
-- Easy to understand > clever code
+名前は読み手が責務とデータの意味を追えるように、具体的で説明的なものにします。処理を表す関数やメソッドは、動詞と対象を含めます。定数は、実行時に変化しない値であることと、その意味を名前から識別できるようにします。大文字・小文字、区切り文字などの綴りは対象言語の規約へ委ね、言語をまたいだ一つの記法を押し付けません。
 
-### 3. DRY (Don't Repeat Yourself)
+## State and Mutability
 
-- Extract common logic into functions
-- Create reusable classes/utilities
-- Share utilities across modules
-- Avoid copy-paste programming
+呼び出し元が所有する値や共有状態は、原則として変更せず、新しい値を作成します。可変操作が必要な場合は、対象の所有権、ライフサイクル、公開契約、性能上の理由を確認し、変更しない代替手段を検討したうえで、理由と影響範囲を記録します。新しく作成した作業用の値をその場で組み立てる場合や、公開契約が呼び出し元から見える変更を要求する場合だけ、対象を限定して例外を認めます。
 
-### 4. YAGNI (You Aren't Gonna Need It)
+## Types and Public Contracts
 
-- Don't build features before they're needed
-- Avoid speculative generality
-- Add complexity only when required
-- Start simple, refactor when needed
+公開境界の引数、返り値、状態、エラー、外部との入出力は、型または対象言語相当の仕組みで表現します。動的な値や未検証の値を境界の外へ広げず、外部境界で具体的な型へ絞ります。型で表せない制約は、公開契約、schema、検証処理のいずれかで明示し、呼び出し側が暗黙の前提を推測しないようにします。
 
-## Python Naming Standards
+## Errors and Failure Handling
 
-### Variable Naming
+期待できる失敗は具体的な型や分類ごとに処理し、原因と文脈を失わずに呼び出し側へ伝えます。外部境界で内部の失敗を公開契約のエラーへ変換する場合も、原因を追跡できるようにします。広すぎる捕捉、空の catch、成功したように返す代替値、ログだけで握りつぶす処理は避けます。広域の捕捉が必要な場合は、境界で共通処理を行って再送出するなど、必要な範囲と理由を明示します。
 
-```python
-# ✅ GOOD: Descriptive names (snake_case)
-market_search_query = 'election'
-is_user_authenticated = True
-total_revenue = 1000
-user_data = fetch_user_data()
+## Concurrency and Ordering
 
-# ❌ BAD: Unclear names
-q = 'election'
-flag = True
-x = 1000
-d = get_data()
-```
+相互に依存しない処理は、可用性、リソース制限、失敗時の扱いを確認したうえで並行化します。依存関係がある処理は、必要な順序を保ち、途中の失敗、取消し、部分的な成功を公開契約と整合させます。並行化そのものを目的にせず、共有状態の競合、外部サービスの rate limit、エラーの集約方法を考慮します。
 
-### Function Naming
+## Input Validation
 
-```python
-# ✅ GOOD: Verb-noun pattern, snake_case
-async def fetch_market_data(market_id: str) -> Market:
-    pass
+外部入力は信頼せず、受け付ける境界で型、schema、必須条件、範囲、形式を検証します。検証結果を公開契約と内部の型へ反映し、未検証の辞書や文字列を下流の処理へそのまま渡しません。入力検証を各処理へ重複させず、source of truth となる schema または境界へ集約します。
 
-def calculate_similarity(vector_a: list[float], vector_b: list[float]) -> float:
-    pass
+## Testing Principles
 
-def is_valid_email(email: str) -> bool:
-    pass
+テストは実装の現在の構造ではなく、仕様、受入条件、公開契約から導きます。テスト対象の内部呼び出し、private な属性、現在のアルゴリズムを期待値の根拠にせず、利用者から観測できる結果、状態、外部との契約を検証します。
 
-# ❌ BAD: Unclear or noun-only
-async def market(id):
-    pass
+- Arrange では入力、前提条件、依存境界を準備し、Act では検証対象の振る舞いを実行し、Assert では仕様から導いた観測可能な結果を検証する。各段階の責務を混在させない。
+- テスト名は、何が起きるかという観測可能な振る舞いと、その条件または入力を表す。実装メソッド名や `works` のような意味のない名前を期待値の根拠にしない。
+- 各テストは他のテストの実行順、共有可変状態、外部環境の残存状態に依存せず、単独で再実行できるようにする。
+- 正常系だけでなく、仕様に定義された境界値、入力不備、権限・状態の差異、外部依存の失敗、エラー伝播を網羅する。想像でケースを増やすのではなく、仕様と公開契約から必要なケースを導く。
+- テストフレームワーク、fixture、test double、coverage、テスト先行の工程などの具体的な運用は、対象言語と TDD workflow の正本に従う。
 
-def similarity(a, b):
-    pass
+## Structure and Coupling
 
-def email(e):
-    pass
-```
+ファイルやモジュールは一つの責務に集中させ、高い凝集度と低い結合度を保ちます。関連する処理は既存のレイアウトと依存境界に沿って配置し、既存アーキテクチャを確認せずに feature-first、layer、type-first などの分類を無条件に押し付けません。既存の命名、構造、例外処理、依存方向を読み、現在のプロジェクトの正本に合わせます。
 
-### Constants
+## Complexity and Maintainability
 
-```python
-# ✅ GOOD: UPPER_CASE for constants
-MAX_RETRIES = 3
-API_TIMEOUT_SECONDS = 30
-DEFAULT_PAGE_SIZE = 20
+長大な関数やファイル、深いネスト、magic number、重複、過剰な抽象化を検出し、責務の分割、早期 return、名前付きの値、適切な共通化で改善します。共通の基本目安は、関数50行未満、ファイル400行程度、ネスト4段以下とします。既存プロジェクトにこれと異なる閾値が明示され、そのプロジェクトの正本として適用されている場合は、既存の閾値と適用範囲を優先します。どちらの場合も、閾値を行数削減の目的で機械的に適用し、必要な責務や要素を削らないようにします。
 
-# ❌ BAD: Not constant-like
-max_retries = 3
-api_timeout = 30
-```
+## Performance
 
-## Immutability Pattern (CRITICAL)
-
-```python
-# ✅ ALWAYS create new objects, NEVER mutate
-user_updated = {
-    **user,
-    'name': 'New Name'
-}
-
-items_updated = [*items, new_item]
-
-# Dict unpacking for multiple updates
-config_updated = {
-    **config,
-    'debug': True,
-    'timeout': 60
-}
-
-# ❌ NEVER mutate directly
-user['name'] = 'New Name'  # BAD - mutation!
-items.append(new_item)     # BAD - mutation!
-```
-
-## Type Hints (REQUIRED)
-
-```python
-# ✅ GOOD: Complete type hints
-def get_market(market_id: str) -> Market | None:
-    """Fetch market by ID."""
-    pass
-
-async def create_user(email: str, name: str) -> User:
-    """Create new user."""
-    pass
-
-def filter_markets(markets: list[Market], status: str) -> list[Market]:
-    """Filter markets by status."""
-    pass
-
-# With pydantic
-from pydantic import BaseModel, EmailStr
-
-class UserCreate(BaseModel):
-    email: EmailStr
-    name: str
-    age: int
-
-# ❌ BAD: No type hints (mypy will fail)
-def get_market(id):
-    pass
-
-def create_user(email, name):
-    pass
-```
-
-## Error Handling
-
-```python
-# ✅ GOOD: Comprehensive error handling
-import logging
-
-def fetch_market_data(market_id: str) -> Market:
-    """Fetch market data from API."""
-    try:
-        response = httpx.get(f'/api/markets/{market_id}')
-        response.raise_for_status()
-        return Market(**response.json())
-
-    except httpx.HTTPStatusError as e:
-        logging.error(f'API error: {e.response.status_code}')
-        raise ValueError(f'Failed to fetch market {market_id}') from e
-
-    except Exception as e:
-        logging.error(f'Unexpected error: {e}')
-        raise
-
-# ❌ BAD: No error handling
-def fetch_market_data(market_id):
-    response = httpx.get(f'/api/markets/{market_id}')
-    return Market(**response.json())
-```
-
-## Async/Await Best Practices
-
-```python
-# ✅ GOOD: Parallel execution when possible
-import asyncio
-
-async def fetch_all_data() -> tuple[list[User], list[Market], list[Stat]]:
-    """Fetch data in parallel."""
-    users, markets, stats = await asyncio.gather(
-        fetch_users(),
-        fetch_markets(),
-        fetch_stats()
-    )
-    return users, markets, stats
-
-# ❌ BAD: Sequential when unnecessary
-async def fetch_all_data():
-    users = await fetch_users()      # Wait for this
-    markets = await fetch_markets()  # Then this
-    stats = await fetch_stats()      # Then this
-    return users, markets, stats
-```
-
-## Validation (Pydantic)
-
-```python
-# ✅ GOOD: Schema validation with pydantic
-from pydantic import BaseModel, EmailStr, field_validator
-
-class CreateMarketRequest(BaseModel):
-    name: str
-    description: str
-    end_date: str
-    tags: list[str]
-
-    @field_validator('name')
-    @classmethod
-    def name_not_empty(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError('Name cannot be empty')
-        return v.strip()
-
-    @field_validator('description')
-    @classmethod
-    def description_length(cls, v: str) -> str:
-        if len(v) < 10:
-            raise ValueError('Description must be at least 10 chars')
-        return v
-
-# Usage in FastAPI
-@app.post('/markets')
-async def create_market(request: CreateMarketRequest):
-    """Create market with validated input."""
-    # request is already validated
-    pass
-
-# ❌ BAD: Manual validation
-def create_market(data: dict):
-    if not data.get('name'):
-        raise ValueError('name required')
-    if len(data.get('description', '')) < 10:
-        raise ValueError('description too short')
-    # ...
-```
-
-## File Organization
-
-### Project Structure
-
-```
-src/
-├── __init__.py
-├── main.py                      # FastAPI app entry point
-├── app/
-│   ├── __init__.py
-│   ├── api/                     # API routes
-│   │   ├── __init__.py
-│   │   ├── market_router.py     # Market endpoints
-│   │   └── serializer/          # Request/response models
-│   │       ├── __init__.py
-│   │       └── market_serializer.py
-│   ├── usecase/                 # Business logic
-│   │   ├── __init__.py
-│   │   └── market_use_case.py
-│   ├── domain/                  # Domain logic
-│   │   ├── __init__.py
-│   │   ├── entity/              # Entity definitions
-│   │   │   ├── __init__.py
-│   │   │   └── market.py
-│   │   ├── service/             # Domain services
-│   │   │   ├── __init__.py
-│   │   │   └── market_service.py
-│   │   └── interface/           # Interfaces/ABCs
-│   │       ├── __init__.py
-│   │       ├── repository.py
-│   │       └── provider.py
-│   └── infrastructure/          # DB, external APIs
-│       ├── __init__.py
-│       ├── models/              # SQLAlchemy models
-│       │   ├── __init__.py
-│       │   └── market.py
-│       ├── repository/          # DB operations
-│       │   ├── __init__.py
-│       │   └── market_repository.py
-│       └── provider/            # External APIs
-│           ├── __init__.py
-│           └── openai_provider.py
-└── tests/
-    ├── __init__.py
-    ├── unit/
-    ├── integration/
-    └── e2e/
-```
-
-### File Naming
-
-```
-app/api/market_router.py          # snake_case for modules
-app/domain/entity/market.py       # Entity definition
-app/domain/service/market_service.py
-app/infrastructure/repository/market_repository.py
-tests/unit/test_market_service.py  # test_*.py or *_test.py
-```
-
-## Comments & Documentation
-
-### When to Comment
-
-```python
-# ✅ GOOD: Explain WHY, not WHAT
-# 障害中に API へ負荷を集中させないため指数バックオフを使う
-delay = min(1000 * (2 ** retry_count), 30000)
-
-# 大きなリストでの性能を優先し、あえてミュータブルな操作にしている
-items.extend(new_items)
-
-# ❌ BAD: Stating the obvious
-# カウンタを1増やす
-counter += 1
-
-# name にユーザー名を代入する
-name = user.name
-```
-
-### Docstrings (Google Style)
-
-```python
-# ✅ GOOD: Docstring for all public functions
-def calculate_similarity(
-    vector_a: list[float],
-    vector_b: list[float]
-) -> float:
-    """Calculate cosine similarity between two vectors.
-
-    Args:
-        vector_a: First vector of floats.
-        vector_b: Second vector of floats.
-
-    Returns:
-        Similarity score between 0 and 1.
-
-    Raises:
-        ValueError: If vectors have different lengths or are empty.
-
-    Example:
-        >>> similarity = calculate_similarity([1, 0, 0], [0, 1, 0])
-        >>> similarity
-        0.0
-    """
-    pass
-
-# ✅ GOOD: Class docstring
-class Market:
-    """Represents a prediction market.
-
-    Attributes:
-        id: Unique market identifier.
-        name: Market name.
-        status: Current market status (active, resolved, closed).
-    """
-
-    id: str
-    name: str
-    status: str
-```
-
-## Database Queries
-
-```python
-# ✅ GOOD: Select only needed columns (ORM)
-from sqlalchemy import select
-
-statement = (
-    select(Market.id, Market.name, Market.status)
-    .where(Market.status == 'active')
-    .limit(10)
-)
-result = session.execute(statement)
-
-# ✅ GOOD: Use parameterized queries (no injection risk)
-statement = select(Market).where(Market.id == market_id)
-market = session.execute(statement).scalar_one_or_none()
-
-# ❌ BAD: Select all columns
-statement = select(Market)
-
-# ❌ BAD: String concatenation (SQL injection!)
-query = f"SELECT * FROM markets WHERE id = '{market_id}'"
-```
-
-## Testing Standards
-
-### Test Structure (AAA Pattern)
-
-```python
-import pytest
-
-def test_calculate_similarity_identical_vectors():
-    """Test similarity of identical vectors."""
-    # Arrange
-    vector_a = [1, 0, 0]
-    vector_b = [1, 0, 0]
-
-    # Act
-    similarity = calculate_similarity(vector_a, vector_b)
-
-    # Assert
-    assert similarity == 1.0
-
-def test_calculate_similarity_orthogonal_vectors():
-    """Test similarity of orthogonal vectors."""
-    # Arrange
-    vector_a = [1, 0, 0]
-    vector_b = [0, 1, 0]
-
-    # Act
-    similarity = calculate_similarity(vector_a, vector_b)
-
-    # Assert
-    assert similarity == 0.0
-
-def test_calculate_similarity_invalid_vectors():
-    """Test similarity with invalid input."""
-    # Act & Assert
-    with pytest.raises(ValueError):
-        calculate_similarity([1, 0], [1, 0, 0])
-```
-
-### Test Naming
-
-```python
-# ✅ GOOD: Descriptive test names
-def test_returns_empty_list_when_no_markets_match_query():
-    pass
-
-def test_raises_error_when_openai_api_key_missing():
-    pass
-
-def test_falls_back_to_substring_search_when_redis_unavailable():
-    pass
-
-# ❌ BAD: Vague test names
-def test_works():
-    pass
-
-def test_search():
-    pass
-```
-
-## Code Smell Detection
-
-### 1. Long Functions
-
-```python
-# ❌ BAD: Function > 50 lines
-def process_market_data(data):
-    # 100 lines of code
-    pass
-
-# ✅ GOOD: Split into smaller functions
-def process_market_data(raw_data: dict) -> Market:
-    """Process raw market data."""
-    validated = validate_market_data(raw_data)
-    transformed = transform_market_data(validated)
-    return save_market(transformed)
-
-def validate_market_data(data: dict) -> dict:
-    """Validate market data."""
-    pass
-
-def transform_market_data(data: dict) -> Market:
-    """Transform to Market entity."""
-    pass
-```
-
-### 2. Deep Nesting
-
-```python
-# ❌ BAD: 5+ levels of nesting
-def check_permission(user, market):
-    if user:
-        if user.is_admin:
-            if market:
-                if market.is_active:
-                    if has_permission(user, market):
-                        # Do something
-                        pass
-
-# ✅ GOOD: Early returns
-def check_permission(user: User, market: Market) -> bool:
-    """Check if user has permission."""
-    if not user:
-        return False
-    if not user.is_admin:
-        return False
-    if not market:
-        return False
-    if not market.is_active:
-        return False
-
-    return has_permission(user, market)
-```
-
-### 3. Magic Numbers
-
-```python
-# ❌ BAD: Unexplained numbers
-if retry_count > 3:
-    raise Exception('Max retries exceeded')
-
-time.sleep(0.5)
-
-# ✅ GOOD: Named constants
-MAX_RETRIES = 3
-DEBOUNCE_DELAY_MS = 500
-
-if retry_count > MAX_RETRIES:
-    raise MaxRetriesExceeded()
-
-time.sleep(DEBOUNCE_DELAY_MS / 1000)
-```
-
-## Performance Best Practices
-
-### Lazy Import for Heavy Modules
-
-```python
-# ✅ GOOD: Lazy import in function if used rarely
-def analyze_with_ml(data: list) -> dict:
-    """Analyze data with ML model (heavy)."""
-    import numpy as np  # Only import when needed
-    return np.mean(data)
-
-# ✅ GOOD: Import at top if used frequently
-import numpy as np  # Frequent use
-
-def process_arrays(arrays: list[np.ndarray]) -> np.ndarray:
-    """Process numpy arrays."""
-    return np.concatenate(arrays)
-```
-
-### List Comprehensions Over Loops
-
-```python
-# ✅ GOOD: List comprehension
-markets_active = [m for m in markets if m.status == 'active']
-market_names = [m.name for m in markets]
-tuples = [(m.id, m.name) for m in markets]
-
-# ❌ BAD: Manual loop
-markets_active = []
-for m in markets:
-    if m.status == 'active':
-        markets_active.append(m)
-```
-
-### Generator for Large Datasets
-
-```python
-# ✅ GOOD: Generator for memory efficiency
-def read_large_file(filepath: str):
-    """Yield lines from large file."""
-    with open(filepath) as f:
-        for line in f:
-            yield line.strip()
-
-# Usage
-for line in read_large_file('huge_file.txt'):
-    process(line)  # Processes one line at a time
-
-# ❌ BAD: Load entire file
-with open('huge_file.txt') as f:
-    lines = f.readlines()  # Loads all into memory
-    for line in lines:
-        process(line)
-```
-
-## Checklist Before Marking Code Complete
-
-- [ ] Code is readable and well-named
-- [ ] Functions are small (< 50 lines)
-- [ ] Files are focused (< 400 lines typical)
-- [ ] No deep nesting (> 4 levels)
-- [ ] Proper error handling with try/except
-- [ ] No hardcoded values (use constants)
-- [ ] No mutation (immutable patterns used)
-- [ ] Type hints on all functions
-- [ ] Pass mypy type checking
-- [ ] Docstrings for public functions
-- [ ] No `print()` (use logging)
-- [ ] No commented-out code
-
-## Python Syntax Constraints
-
-- NO `typing` module（明示的なユーザー承認がある場合のみ例外）
-- NO functions defined inside functions
-- NO imports inside functions
-- ALL imports must be at file top
-- NO full-width brackets or symbols (RUF003 compliance)
+性能改善は計測、プロファイル、または再現可能な観測を根拠にします。アルゴリズムの計算量、不要な割り当てや I/O、データのストリーミング、バッチ化、キャッシュ、外部境界の待ち時間を検討します。性能上の根拠がない早すぎる最適化や、可読性・正確性・安全性を損なう巧妙な実装は追加しません。
+
+## Grouped Values and Observability
+
+状態、種別、権限など同じグループに属する値は、文字列や並列した定数の組み合わせではなく、Enum 相当の型で表現します。標準出力へ本番の診断情報を直接出力せず、プロジェクトの logging または observability の仕組みを使い、必要な文脈と機密情報の扱いを確認します。
+
+## Change and Example Integrity
+
+すべての変更には依頼と既存規約に基づく理由を持たせ、無関係な整形、改行、空白変更、cleanup、抽象化を加えません。実装例、テスト例、README などのコード例にも同じ規約を適用し、必要な型、docstring、入力条件、期待結果を削って短縮しません。例は実際の公開 API、設定、source of truth と一致させ、未検証の内容を実行済みと表現しません。可能な範囲で、コード例の実行、リンク、参照先の存在を確認します。
+
+## Checklist
+
+変更を完了扱いにする前に、次の共通条件を確認します。プロジェクトに追加の DoD がある場合は、それも満たします。
+
+- [ ] コードは読みやすく、名前から責務と値の意味を追える
+- [ ] 関数は50行未満で一つの責務に集中している（既存プロジェクトが明示的な別閾値を正本としている場合は、その閾値を満たしている）
+- [ ] ファイルは責務に集中し、400行程度を超えていない（既存プロジェクトが明示的な別閾値を正本としている場合は、その閾値を満たしている）
+- [ ] ネストは4段以下で、深い分岐を早期 return や責務分割で抑えている（既存プロジェクトが明示的な別閾値を正本としている場合は、その閾値を満たしている）
+- [ ] 期待できる失敗を具体的に処理し、原因を保って伝播または境界で変換しており、握りつぶしていない
+- [ ] 意味のない hardcoded value や magic number を残さず、名前付きの定数などで意図を表している
+- [ ] 呼び出し元や共有状態を、所有権・公開契約・性能上の明確な理由なく変更していない
+- [ ] 関数・メソッドの引数と返り値、および公開境界の状態・エラー・外部入出力を、対象言語の型または同等の契約で表現している
+- [ ] 本番の診断情報を標準出力へ直接出さず、プロジェクトの logging または observability を使っている
+- [ ] コメントアウトしたコードや不要な重複・過剰な抽象化を残していない
+- [ ] 既存コメントを保持し、新しいコメントは非自明な理由・制約だけを補足しており、コードの言い換え、履歴、却下案を含めていない
+- [ ] formatter、linter、型検査、テストなど、プロジェクトで定義された検査を正本の task runner 経由で確認している
+- [ ] formatter が決める改行、インデント、空白を手動で固定しておらず、無関係な整形を変更に含めていない
 
 ## Documentation
 
-- Docstring は Google Style 必須（Python の場合は PEP 257 準拠）
-- モジュールレベルの docstring は記載しない（ファイル冒頭に `"""..."""` を置かない）
-- docstring、コメント、ドキュメントはすべて日本語で記述する
-- 英語で書くのは識別子などコード本体だけで、docstring とコメントはその対象に含めない
+docstring、コメント、README などのドキュメントは、呼び出し側や読み手がその処理や公開 API を利用・保守するために必要な情報を記載します。コードを別の場所で説明すること自体を目的にせず、既存の source of truth と重複させません。
 
-### Docstring に書くこと
+### 媒体ごとの使い分け
 
-呼び出し側がその処理を使うために必要な情報だけを書く。概要と要約であり、スコープ内のロジックの説明書ではない。
+同じ情報を複数の媒体へ重複させず、読者と時間軸に応じて次の責務へ置きます。恒久的な仕様は README または docstring／API doc comment、変更時だけ必要な記録は PR、局所的な実装理由はコメントに記載します。
 
-- 引数や返り値の型・意味・使い方は `Args:` / `Returns:` / `Raises:` の責務。何が入ってくるかを概要にも重ねて書くと冗長になるだけ
-- 「〜としているのは〜のため」のようなロジックの理由は書かない。コメントに書く
-- 文の途中で不用意に改行しない。一行を長くしすぎない。どちらも読みにくくなるため例外は認めない
+| 媒体 | 読者 | 時間軸 | 含める内容 | 含めない内容と正本 |
+| --- | --- | --- | --- | --- |
+| PR | 変更をレビュー・運用する人 | 変更単位の記録 | why/what、影響範囲、検証結果、リスク、rollback、未解決事項、Issue・ADR などの参照 | 利用者向け setup、API の恒久的な仕様、実装詳細は重複させない。見出し・順序・必須項目は各リポジトリの `template.md` を正本とし、ない場合だけ [git-workflow](../git-workflow/SKILL.md) の fallback に従う。PR template の詳細はこの skill で再定義しない |
+| README.md | リポジトリや成果物を初めて使う読者 | 現在の恒久的な入口 | 現在の目的、対象、setup、実行入口、公開された使い方、必要な環境変数名、安全な導線、主要な構成への入口、troubleshooting | 変更履歴、一時的な作業報告、細かな内部アルゴリズム、PR 固有情報は置かない。階層別の具体構成と例は [README reference](references/readme.md) を正本とする |
+| docstring／API doc comment | 公開 API の呼び出し側と保守者 | 公開契約が有効な期間 | 目的、前提・制約、引数、返り値、例外、必要に応じた副作用と使用例 | README の導入手順、PR の変更履歴、実装手順、内部アルゴリズム、判断の履歴は重複させない。記法は各言語 reference を正本とする |
+| コメント | その箇所を将来保守する人 | 現在の実装に紐づく局所的な理由 | コードから読み取れない理由、制約、不変条件、外部仕様の癖を短く記載 | コードの言い換え、公開 API の説明、README の手順、PR の報告、過去の実装・却下案・変更履歴は書かない。設計判断の履歴は ADR などの正本へ記録する |
 
-### コメントに書くこと
+- docstring の概要には処理の目的と利用上の前提だけを書き、実装の手順や内部のアルゴリズムは書かない。
+- 引数、返り値、送出する例外の意味や制約は、それぞれ言語・フレームワークの標準形式で記載する。Python の `Args:` は引数、`Returns:` は返り値、`Raises:` は送出条件と例外の意味を担い、概要へ同じ型・意味・使い方を重ねない。
+- 非自明な実装理由や制約は、呼び出し側の API 説明ではなく、対象箇所のコメントへ簡潔に記載する。コードから明らかな処理の言い換えや、呼び出している関数の内部ロジックは説明しない。
+- 過去の実装、却下した代替案、変更の履歴は通常の docstring やコメントへ残さず、必要な場合は適切な履歴・意思決定記録の正本へ記載する。
+- ドキュメントの分量や改行は削減指標で決めず、必要な情報が欠落しないこと、読み手が責務と使い方を追えることを優先する。改行・インデント・空白は formatter の出力に従う。
 
-その処理を理解する補助として、処理が何なのかと、非自明なロジックをなぜそうしたのかを簡潔に書く。
+## References
 
-- 名前・型・直下のコードを見れば分かることは書かない。なぜそうしたのかも、コードから読み取れない場合のみ書く
-- 以前どうだったか、却下した代替案など、今どうなっているか以外の情報はいらない
-- 呼んでいる関数の先のロジックは書かない。その関数を見れば分かる
-
-```python
-def create_user(name: str, age: int) -> dict[str, str | int]:
-    """ユーザーを作成する。
-
-    Args:
-        name: ユーザー名。
-        age: ユーザーの年齢。
-
-    Returns:
-        作成されたユーザー情報を含む辞書。
-
-    Raises:
-        ValueError: age が 0 未満の場合。
-    """
-```
-
-## Design Patterns
-
-- Always follow existing implementation patterns
-- Organize by feature/domain, not by type (layer)
-- One concern per file
-- High cohesion, low coupling
-- Related code should be colocated
-
-## Tools & Commands
-
-```bash
-# Format code
-black src/
-
-# Lint and fix
-ruff check --fix src/
-
-# Type checking
-mypy src/
-
-# Run tests
-pytest tests/ -v
-
-# Coverage
-pytest tests/ --cov=src/
-
-# All checks
-black src/ && ruff check --fix src/ && mypy src/ && pytest tests/ --cov=src/
-```
+- [Python](references/python.md) — Python の構文、型、async、import、docstring、ruff、mypy、pytest が関係するときに読む。
+- [README](references/readme.md) — リポジトリ README の階層別構成、必須項目、具体例、source of truth、責務外を扱うときに読む。
+- [TDD workflow](../tdd-workflow/SKILL.md) — 振る舞い変更のテスト設計、test double、pytest 拡張、RED-GREEN-REFACTOR、DoD が関係するときに読む。Python reference ではこれらを重複定義しない。
+- 将来の Go、TypeScript などの規約は同じ階層へ追加し、必要な言語だけを読む。
