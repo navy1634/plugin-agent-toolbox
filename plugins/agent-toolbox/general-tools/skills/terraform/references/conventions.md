@@ -6,6 +6,7 @@
 - Terraform のプロジェクトルートに `.tflint.hcl` と `.terraform-docs.yml` を置きます。
 - TFLint の `terraform_required_version`、`terraform_required_providers`、`terraform_standard_module_structure` は無効化しません。
 - module の `README.md` は `terraform-docs` で生成し、手書きの内容を混在させません。
+- `terraform-docs` の出力更新は CI に委ねます。ユーザーから明示的な実行依頼がない限りローカル実行せず、設定や既存 README から出力を推測して表を手書きしたり、生成領域を補完・再現したりしてはいけません。実行依頼があっても生成ツールを使えない場合は手書きで代替せず、README を変更しないまま未実行の理由を報告します。
 
 ## ディレクトリとファイル
 
@@ -54,7 +55,7 @@ Terraform は同じ module のトップレベルにあるすべての `.tf` フ�
 
 - `terraform fmt -recursive` を適用し、等号の位置は formatter に任せます。
 - resource の属性は、必須引数、任意引数、ネストした block、meta-argument、`tags` の順に置きます。
-- `for_each` と `count` は原則として使いません。`for_each` は subnet のように、同一の resource 構成と責務を複数の入力要素へ繰り返し適用する場合だけ許可します。
+- `for_each` と `count` は原則として使いません。`for_each` は subnet のように、同一の resource または module の構成と責務を map の各 key または set の各 member へ1対1で適用し、その要素数と作成 instance 数を一致させる場合だけ許可します。resource の有無の切り替え、異なる resource の代替、入力の一部だけを作成する条件分岐には使いません。
 - `count` は使わず、環境ごとの resource の有無や個数を `count` や条件式で切り替えません。要件上どうしても環境差が必要な場合は、機能 module の構成または明示的な設定として表現し、理由を記録します。
 - `format("%s-…")` のような遅延的な文字列組み立ては使わず、構造が読み手に明示される文字列補間を使います。
 - security group の ingress と egress は `aws_security_group_rule` で個別に定義し、resource 内の inline rule を使いません。

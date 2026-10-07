@@ -16,6 +16,8 @@ terraform plan
 
 複数環境を変更する場合は、対象環境ごとに `terraform validate` と `terraform plan` を実行します。backend や provider の初期化が必要な repository では、既存の初期化手順を先に実行し、認証情報や state を出力へ漏らしません。
 
+この skill では Terraform の `terraform test` と `.tftest.hcl`／`.tftest.json` を必須検証とせず、Terraform 設定変更のために新規作成・実行しません。Terraform の検証は format、validate、lint、plan で行います。
+
 ## plan の確認
 
 plan の結果について、次の項目を確認します。

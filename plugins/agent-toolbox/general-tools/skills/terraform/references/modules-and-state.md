@@ -52,7 +52,9 @@ module "user_registration" {
 
 ## resource address の移行
 
-resource address を変更する場合は、手動の state 操作ではなく `imports.tf` と `moved.tf` に HCL block を記述し、PR で plan の差分を確認します。
+既存 resource の import、resource address の変更、state からの除外を行う場合は、手動の state 操作ではなく、`import`、`moved`、`removed` block を root module ごとの専用ファイル `imports.tf`、`moved.tf`、`removed.tf` に記述し、PR で plan の差分を確認します。repository 固有のファイル分割規約がある場合はそれを優先します。
+
+これらの block は環境 root module にのみ記述し、再利用 child module 内では禁止します。移行対象が child module 内の resource でも、block は環境 root module の専用ファイルに記述します。
 
 ```hcl
 import {
@@ -64,6 +66,16 @@ moved {
   from = aws_s3_bucket.old_logs
   to   = aws_s3_bucket.logs
 }
+
+removed {
+  from = aws_s3_bucket.legacy_logs
+
+  lifecycle {
+    destroy = false
+  }
+}
 ```
+
+`removed` block は resource を state から外すために使い、実体を残す場合は `lifecycle { destroy = false }` を指定します。
 
 移行後に不要となった block は apply の結果を確認してから削除し、削除理由と state address の変化をコミットおよび PR に残します。
