@@ -51,6 +51,12 @@ Terraform は同じ module のトップレベルにあるすべての `.tf` フ�
 - 共通タグは provider の `default_tags` で付与し、resource 側には Name tag だけを指定します。
 - 共通タグを `merge()` で resource ごとに再構成しません。
 
+## 依存関係
+
+`depends_on` は原則禁止とします。resource の属性を参照し、module 間では必要な output を input に直接渡して、Terraform が依存関係を推論できる構成にします。参照で表現済みの依存を重ねて指定したり、module の責務分割や循環依存の問題を実行順序の指定で回避したりしてはいけません。
+
+例外は、他の resource の処理完了に依存するものの、その属性値を必要とせず、参照では依存関係を表せない場合に限ります。使用箇所の日本語コメントに、必要な依存関係と参照では解決できない理由を記載し、対象を必要最小限に絞ります。module 全体への依存は影響範囲が広いため避け、例外として使う場合も `terraform plan` で不要な変更・置換や未確定値の増加がないか確認します。
+
 ## HCL の記述順序
 
 - `terraform fmt -recursive` を適用し、等号の位置は formatter に任せます。

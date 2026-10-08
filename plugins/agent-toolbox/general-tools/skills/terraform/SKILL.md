@@ -38,6 +38,7 @@ Terraform で AWS インフラを扱うときは、対象 module、state、provi
 - state を変更する `import`、`moved`、`removed` block は resource 定義へ混在させず、root module ごとに `imports.tf`、`moved.tf`、`removed.tf` という block 種類別の専用ファイルへ記述します。repository 固有の既存命名がある場合はそれを優先します。
 - `import`、`moved`、`removed` block は環境 root module にのみ記述し、再利用 child module 内では禁止します。移行対象が child module 内の resource でも、block は環境 root module の専用ファイルに記述します。
 - `for_each` は、同じ構成と責務の resource または module を map の key／set の member ごとに1つ作成する場合だけ許可し、入力要素数と作成 instance 数を一致させます。
+- `depends_on` は原則禁止とし、resource の属性参照と module の input／output で依存関係を表現します。参照では表せない依存がある場合だけ、[構成とコーディング規約](references/conventions.md#依存関係)の例外条件に従います。
 - `terraform taint` は使わず、置換が必要な場合は `terraform apply -replace=<address>` の影響を確認します。
 - `-target` は障害復旧などの限定用途にとどめ、理由と対象を記録します。
 - local state、認証情報、secret、個人情報を repository、plan、ログ、生成物へ残しません。
