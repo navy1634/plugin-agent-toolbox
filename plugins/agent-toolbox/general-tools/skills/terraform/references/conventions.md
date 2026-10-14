@@ -51,6 +51,14 @@ Terraform は同じ module のトップレベルにあるすべての `.tf` フ�
 - 共通タグは provider の `default_tags` で付与し、resource 側には Name tag だけを指定します。
 - 共通タグを `merge()` で resource ごとに再構成しません。
 
+## 環境ごとの差分
+
+- 環境 root、state、provider、account の分離は実行境界であり、それだけでは機能の環境差分を設ける理由になりません。
+- 共有 child module は全 call site で同じ実装を使います。module が prd からも呼ばれていることは影響範囲の確認事項であり、変更を dev 限定にする理由ではありません。
+- 依頼または承認済み設計で環境限定の振る舞いが明示されている場合だけ、その差分を表現します。現在の root、profile、実行ロール、過去の別依頼から対象環境を推測しません。
+- 環境名による条件式、特定環境だけを有効化する flag、同じ機能を持つ module の複製を、環境差分を作る目的で追加しません。環境ごとの値が必要な場合も、root の構成または既存の module 契約で表現します。
+- 共有 module の全 call site、現行の ADR・契約、対象 root の plan を確認し、変更が及ぶ環境を明らかにします。明示された環境限定要件を既存契約で満たせない場合は、独自の分岐を作らず、影響と必要な設計判断を示します。
+
 ## 依存関係
 
 `depends_on` は原則禁止とします。resource の属性を参照し、module 間では必要な output を input に直接渡して、Terraform が依存関係を推論できる構成にします。参照で表現済みの依存を重ねて指定したり、module の責務分割や循環依存の問題を実行順序の指定で回避したりしてはいけません。
@@ -62,7 +70,7 @@ Terraform は同じ module のトップレベルにあるすべての `.tf` フ�
 - `terraform fmt -recursive` を適用し、等号の位置は formatter に任せます。
 - resource の属性は、必須引数、任意引数、ネストした block、meta-argument、`tags` の順に置きます。
 - `for_each` と `count` は原則として使いません。`for_each` は subnet のように、同一の resource または module の構成と責務を map の各 key または set の各 member へ1対1で適用し、その要素数と作成 instance 数を一致させる場合だけ許可します。resource の有無の切り替え、異なる resource の代替、入力の一部だけを作成する条件分岐には使いません。
-- `count` は使わず、環境ごとの resource の有無や個数を `count` や条件式で切り替えません。要件上どうしても環境差が必要な場合は、機能 module の構成または明示的な設定として表現し、理由を記録します。
+- `count` は使わず、環境ごとの resource の有無や個数を `count` や条件式で切り替えません。環境差分を追加する条件と表現方法は[環境ごとの差分](#環境ごとの差分)に従います。
 - `format("%s-…")` のような遅延的な文字列組み立ては使わず、構造が読み手に明示される文字列補間を使います。
 - security group の ingress と egress は `aws_security_group_rule` で個別に定義し、resource 内の inline rule を使いません。
 

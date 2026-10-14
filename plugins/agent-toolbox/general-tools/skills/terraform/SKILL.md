@@ -21,14 +21,17 @@ Terraform で AWS インフラを扱うときは、対象 module、state、provi
 - `terraform-docs` による module README の生成は CI に委ねます。ユーザーから明示的な実行依頼がない限りローカル実行せず、生成領域の手作業による作成・補完・再現・更新を禁止します。実行依頼があっても生成ツールを使えない場合は手書きで代替せず、README を変更しないまま未実行として報告します。
 - provider、account、region、profile、backend、workspace の境界を暗黙にせず、変更前に確認します。
 - 既存の task runner、CI、module 構成、命名、セキュリティ方針がある場合は、それらを優先します。
+- dev、stg、prd ごとの root、state、provider、account の分離は実行境界であり、機能の環境差分を設ける根拠ではありません。依頼または承認済み設計で明示されていない限り、共有 child module に環境名による条件分岐、環境限定 flag、module の重複を追加しません。
+- 「共有 module が prd にも使われている」「作業中の root や profile が dev」「別の依頼で dev が対象だった」だけでは、今回の変更を dev 限定にする根拠になりません。依頼と現行の ADR・module 契約から対象範囲を決め、全 call site と該当 root の plan で影響を確認します。環境限定が明示されていて既存契約で表現できない場合は、独自の分岐を追加する前に影響と未確定の設計判断を示します。
 
 ## 作業の進め方
 
 1. 対象 root、環境、module、backend、state、AWS account、region、profile を確認します。
-2. 対象ディレクトリへ移動してから Terraform コマンドを実行し、`terraform plan` を変更の根拠にします。
-3. 変更を最小の責務単位で実装し、resource 差分、state address、権限、ネットワーク、暗号化への影響を確認します。
-4. 必要な format、validate、lint、plan を対象範囲で実行し、実行した範囲と未実行の範囲を分けて記録します。
-5. `apply` または `destroy` が依頼に含まれる場合だけ、対象環境と承認済みの実行経路を確認してから実行します。
+2. 共有 module を変更する場合は全 call site と対象 root を確認し、環境差分を依頼または承認済み設計から決めます。
+3. 対象ディレクトリへ移動してから Terraform コマンドを実行し、`terraform plan` を変更の根拠にします。
+4. 変更を最小の責務単位で実装し、resource 差分、state address、権限、ネットワーク、暗号化への影響を確認します。
+5. 必要な format、validate、lint、plan を対象範囲で実行し、実行した範囲と未実行の範囲を分けて記録します。
+6. `apply` または `destroy` が依頼に含まれる場合だけ、対象環境と承認済みの実行経路を確認してから実行します。
 
 ## 常時適用する安全境界
 

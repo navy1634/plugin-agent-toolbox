@@ -11,7 +11,7 @@
 ## variable と output の契約
 
 - すべての variable に日本語の `description` と `type` を付け、入力制約を `validation` に記述します。
-- `default` は環境に依存しない値だけに設定し、環境差分を default で隠しません。
+- `default` は環境に依存しない値だけに設定し、環境差分を default で隠しません。module input による環境別の振る舞いは[環境ごとの差分](conventions.md#環境ごとの差分)に従います。
 - output の `description` には参照元または利用目的を記載し、機密値は `sensitive = true` にします。
 
 ```hcl
