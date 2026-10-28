@@ -523,9 +523,14 @@ with open('huge_file.txt', encoding='utf-8') as f:
 - [ ] 公開関数・クラスの Python docstring が Google Style と PEP 257 に従い、呼び出し側に必要な情報を含んでいる
 - [ ] 本番コードに `print()` を残さず、logging または observability を使っている
 
-## Python task-runner examples
+## Python task-runner DoD
 
-Python の format、lint、型検査、test は、プロジェクトで定義された task runner の task を実行します。`black`、`ruff`、`mypy`、`pytest` などの underlying tool を直接呼ばず、親 skill の formatter・task runner 方針に従います。たとえば uv と taskipy が定義されているプロジェクトでは、次の task を実行します。
+Python実装の最低限のDoDでは、対象プロジェクトの `format`、`lint`、`type-check`、`test` taskを実行します。
+CIと同じ対象範囲で全taskを実行し、それぞれ成功したことを確認します。
+CIでlint、format、型検査の失敗が見つかった場合は、依頼差分の内外を問わず今回の作業対象に含めます。
+見つかった失敗を修正し、再実行で成功を確認します。
+複数taskや対象に分かれている場合は、CI対象の全てを実行します。
+uvとtaskipyを使うプロジェクトでは次のコマンドを実行します。
 
 ```bash
 uv run task format
@@ -534,4 +539,9 @@ uv run task type-check
 uv run task test
 ```
 
-task runner がない Python プロジェクトでは、作業指示または既存 CI に定義された検査を使います。存在しない task 名、設定ファイル、formatter を推測して追加しません。開発中の単一テスト実行はプロジェクトの規約が許す場合だけ行い、完了判定ではプロジェクト全体の task を実行します。
+別のtask runnerでは、これらに相当するプロジェクト定義済みのtaskを使います。
+task runnerがない場合は、作業指示または既存CIに定義された同等のコマンドを使います。
+存在しないtask名や設定を推測して追加しません。
+受入条件で必要なE2Eや、coverage閾値があるプロジェクトではcoverage検査も実行します。
+開発中の単一テスト実行はプロジェクトの規約が許す場合だけ行います。
+完了判定では対象プロジェクト全体のtaskを実行します。

@@ -45,7 +45,7 @@ Terraform で AWS インフラを扱うときは、対象 module、state、provi
 - `terraform taint` は使わず、置換が必要な場合は `terraform apply -replace=<address>` の影響を確認します。
 - `-target` は障害復旧などの限定用途にとどめ、理由と対象を記録します。
 - local state、認証情報、secret、個人情報を repository、plan、ログ、生成物へ残しません。
-- 破壊、置換、権限変更、コスト増加がある場合は、対象、影響、復旧手段を plan と PR に記載します。
+- 破壊、置換、権限変更、コスト増加がある場合は、plan と PR に対象、影響、復旧手段など変更内容を記載します。実行状況、検証結果、未確認事項、レビュー担当者への確認依頼は PR 本文に書かず、作成者がレビュー依頼前に必要な plan と検証を確認します。
 
 ## 完了条件
 
