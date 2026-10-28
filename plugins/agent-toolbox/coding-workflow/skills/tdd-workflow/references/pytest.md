@@ -135,5 +135,8 @@ tests/
 
 プロジェクトにcoverage閾値がある場合は、設定の `--cov-fail-under` を正本にします。設定された範囲に対して `pytest-cov` を実行し、`term-missing` は欠落箇所の調査、HTML reportは詳細調査に使います。80%などの数値を、このskillから一律に要求しません。
 
-DoDはタスクランナーの `test`、`lint`、`format`、`type-check`、必要なE2Eタスクを使います。開発中に単一テストをpytestへ直接渡すことは許可しますが、タスクランナーがあるプロジェクトでruffやmypyを直接呼びません。
+Pythonの最低限のDoDコマンドは[Python reference](../../coding-standards/references/python.md#python-task-runner-dod)に従います。
+完了判定と失敗時の継続は[Verification](verification.md)に従います。
+開発中に単一テストをpytestへ直接渡すことは許可します。
+タスクランナーがあるプロジェクトではruffやmypyを直接呼びません。
 理由のない `pytest.skip`、失敗を隠す `xfail`、無期限のretryは使いません。

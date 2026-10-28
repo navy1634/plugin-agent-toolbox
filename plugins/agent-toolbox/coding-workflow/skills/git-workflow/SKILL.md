@@ -35,4 +35,4 @@ git add -A や git add . は使わず、対象ファイルを明示する。.env
 
 ## 完了条件
 
-意図した差分、branch、履歴、remote 状態を再確認し、不要な変更、秘密情報、生成物を残さない。必要な検証が完了し、未確認の CI／remote／deploy 状態を明示し、ユーザーが次に行う操作を分けて報告する。
+意図した差分、branch、履歴、remote 状態を再確認し、不要な変更、秘密情報、生成物を残さない。必要な検証を完了し、未確認の CI／remote／deploy 状態やユーザーが次に行う操作は完了報告で伝える。この報告要件は PR 本文には適用せず、PR 本文の規則は [Pull Requests](references/pull-requests.md) に従う。

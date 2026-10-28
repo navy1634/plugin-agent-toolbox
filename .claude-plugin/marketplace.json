@@ -21,7 +21,7 @@
       "name": "coding-workflow",
       "source": "./plugins/agent-toolbox/coding-workflow",
       "description": "実装、コーディング規約、テスト、開発workflow向けのskills",
-      "version": "0.2.1"
+      "version": "0.2.2"
     },
     {
       "name": "specialized",
