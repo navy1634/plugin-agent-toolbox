@@ -45,14 +45,35 @@ Dependabot または Renovate を使う場合も、更新 PR で release、lockf
 
 新しい action または SHA の更新時は、少なくとも次を確認します。
 
-- owner、repository、release page、commit が意図した取得元と version に一致する
-- action の `action.yml`、実行 script、runtime 依存、nested action、container image が確認可能である
+- workflow の目的に対して action の機能が過不足なく合い、独自実装より保守負担を減らす
+- owner、repository、release page、commit が意図した publisher と version に一致する
+- license、release／commit の履歴、issue 対応、security advisory への対応方針を確認できる
+- stars、forks、Marketplace の利用指標、公開された利用例など複数の導入実績を確認する
+- popularity は利用実績の参考にとどめ、安全性の根拠にはしない
+- `action.yml`、実行される script／container、source、release artifact の生成過程を確認できる
+- runtime 依存、nested action、container image の依存元を確認できる
 - 必要な `GITHUB_TOKEN` scope、secret、Environment 値が最小で、不要な credential を runner に渡さない
 - PR、fork、手動入力、schedule など各 trigger で action が扱う code と入力が安全である
 - self-hosted runner を使う場合、untrusted code と trusted job を共有せず、ephemeral runner または container isolation を用意する
 - action の失敗、timeout、再実行、artifact／cache への書き込みが許容範囲に収まる
 
-source と commit を検証できない action、repository の token を過剰に送信する action、script や image が意図せず mutable tag に依存する action は採用しません。
+lockfile は実行する commit の固定に使いますが、その action が安全である証明にはなりません。
+source と commit を検証できない action、保守状況が不明な action、repository の token を過剰に送信する action、script や image が意図せず mutable tag に依存する action は採用しません。
+
+### 独自実装の前に既存 Action を評価する
+
+PR 作成・更新など汎用的な GitHub 操作では、独自の Git 操作や API 呼び出しを書く前に既存 Action を調べます。
+たとえば [`peter-evans/create-pull-request`](https://github.com/peter-evans/create-pull-request) は、workflow workspace の変更を commit し、Pull Request を作成・更新する候補です。
+これは候補例であり、無条件に承認した一覧ではありません。
+
+候補 Action が要件を満たし、上記の保守・供給網・権限レビューを通る場合は、それを優先します。
+要件に合う action がない、または安全性を確認できない場合は、満たせない要件を記録して独自実装を最小限にします。
+単純な一操作を置き換えるために不要な Action 依存を追加せず、action の導入コストと自作ロジックの保守コストを比較します。
+
+`peter-evans/create-pull-request` を採用する場合も、公式 README の token、permissions、repository 設定、後続 workflow の trigger に関する条件をその時点で確認します。
+現在の [公式 README](https://github.com/peter-evans/create-pull-request#workflow-permissions) は、Actions に Pull Request 作成を許可する Repository 設定を求めています。
+`GITHUB_TOKEN` を使う場合は `contents: write` と `pull-requests: write` が必要で、その token で作成した PR は `push` や `pull_request` workflow を起動しません。
+この制約が後続 CI の要件や trust boundary と合うことを確かめ、採用時点の README でも再確認します。
 
 ## untrusted input と script injection
 

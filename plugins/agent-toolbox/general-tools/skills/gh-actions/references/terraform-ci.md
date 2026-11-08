@@ -2,15 +2,25 @@
 
 Terraform は専用の task runner がない repository もあるため、GitHub Actions から Terraform の gate を直接実行する例外を認めます。対象 root、provider、account、region、backend、state、module の設計と安全境界は `terraform` skill に従い、この reference では workflow 上の実行順序、権限、Environment、結果の受け渡しだけを扱います。
 
+Terraform の path scope は、実際の root と依存関係から決めます。
+root、共有 module、provider lock、task runner 設定、workflow を確認します。
+以下の `**/*.tf` は全 root を対象にする例です。
+root ごとの検査が独立している repository では、各 scope と共有 module に合わせて絞ります。
+
 ## gate の分離
 
 | gate | 実行条件 | 受入条件 |
 | --- | --- | --- |
-| check（format／validate／lint） | 変更された Terraform root | 単一の `check` job／check step で `terraform fmt -recursive -check`、`terraform validate`、`tflint --config .tflint.hcl --recursive` がすべて成功する |
+| check（format／validate／lint） | 変更された Terraform root | 単一の `check` job 内で、format、validate、lint の各 step がすべて成功する |
 | plan | check 成功後、PR ごと、対象 root ごと | `terraform plan` の差分を確認し、PR comment には `tfcmt plan --patch -- terraform plan ...` を使う |
-| apply | main への merge 後（`workflow_dispatch` は例外条件を満たす場合だけ） | 対象 Environment の approval、trusted ref、対象 account／region、plan との対応を確認する |
 
-format、validate、lint は checkout を含む単一の `check` job／check step にまとめ、plan と apply は別 job にします。check が失敗した場合に plan、comment、apply などの後続処理が privileged な操作を開始しない job graph にします。PR の plan comment に write 権限が必要な場合は、untrusted な plan 実行 job と trusted な comment 更新 job の permissions を分け、write 権限を untrusted code へ広げません。
+- apply は、CI workflow の job ではなく、別の deploy workflow に置きます
+- check と plan が同じ review gate の場合、別 job にして順序を明示します
+- format、validate、lint は、一つの `check` job 内で別々の step にします
+- check が失敗した場合、plan や PR comment を成功扱いにしません
+- deploy workflow は protected branch と required check などの gate を経た結果だけを対象にします
+- PR comment に write 権限が必要な場合、plan と comment の job を分けます
+- comment 用の write 権限を untrusted code に渡しません
 
 ## workflow の構成例
 
@@ -22,7 +32,9 @@ on:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
+      - '**/terraform.lock.hcl'
       - '.tflint.hcl'
+      - '.github/workflows/terraform-ci.yml'
 
 permissions:
   contents: read
@@ -38,11 +50,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4.2.2
-      - name: Terraform fmt / validate / lint
-        run: |
-          terraform fmt -recursive -check
-          terraform validate
-          tflint --config .tflint.hcl --recursive
+      - name: Terraform fmt
+        run: terraform fmt -recursive -check
+      - name: Terraform validate
+        run: terraform validate
+      - name: TFLint
+        run: tflint --config .tflint.hcl --recursive
 
   plan:
     name: Terraform plan
@@ -56,10 +69,17 @@ jobs:
 
 この例は配置と依存関係を示す構成例です。実際の repository で必要な `terraform init`、対象 root、backend、provider credentials、plan file、PR comment の方法は既存の Terraform skill、task runner、CI の source of truth に合わせます。
 
+この例は workflow-level の path filter を使います。
+skip された check は `Pending` になるため、required check の構成に注意します。
+詳細は [Workflow の構成](workflow-structure.md) の path filter と必須 check の節を参照します。
+
 ## plan と apply
 
 - PR の plan は変更の影響をレビューできる形で保存し、resource の追加、変更、削除、置換、権限、network、暗号化、コスト、state address を確認します。
-- apply は PR の untrusted code や任意 branch から直接起動せず、main merge 後に対象 Environment approval を経て実行します。manual trigger が必要な場合は [Workflow の構成](workflow-structure.md) の `workflow_dispatch` 例外条件を満たすことを確認します。
+- apply は `.github/workflows/terraform-apply.yml` のような別の deploy workflow に置きます
+- main merge 後に対象 Environment の approval を経て実行します
+- PR の untrusted code や任意 branch から直接起動しません
+- manual trigger は [Workflow の構成](workflow-structure.md) の例外条件を満たす場合だけ使います
 - apply の job には `environment:`、`contents: read`、必要な場合だけ `id-token: write` を付与し、Environment vars の role ARN／region を使います。
 - plan と apply が異なる commit、root、account、region、workspace、Environment に対して実行されないよう、plan の識別子と対象を記録します。
 - `terraform apply -auto-approve` を main 以外で実行せず、production の apply、destroy、state 操作、権限変更は承認済み CI/CD 経路に限定します。
@@ -98,6 +118,7 @@ binary の導入は repository の既存 task runner、toolchain、dependency �
 AWS の credentials は long-lived access key ではなく `aws-actions/configure-aws-credentials` の OIDC を使います。role ARN は Repository／Environment vars で管理し、認証 job だけに `id-token: write` を付与します。
 
 ```yaml
+# .github/workflows/terraform-apply.yml
 jobs:
   apply:
     name: Terraform apply (prd)
