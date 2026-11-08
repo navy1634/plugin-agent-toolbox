@@ -1,0 +1,3 @@
+interface:
+  display_name: "API・バックエンド設計"
+  short_description: "API境界、依存方向、永続化の設計"

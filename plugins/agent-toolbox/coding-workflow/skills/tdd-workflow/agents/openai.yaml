@@ -1,0 +1,3 @@
+interface:
+  display_name: "TDD・テスト設計"
+  short_description: "振る舞いをテストで検証する手順"

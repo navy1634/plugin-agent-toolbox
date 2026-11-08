@@ -1,0 +1,3 @@
+interface:
+  display_name: "AWS CLIの安全な実行"
+  short_description: "profile、操作制約、認証期限切れへの対応"

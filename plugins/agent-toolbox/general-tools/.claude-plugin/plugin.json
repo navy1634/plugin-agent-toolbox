@@ -1,6 +1,6 @@
 {
   "name": "general-tools",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "AWS CLI、GitHub Actions、Terraformのskills",
   "author": {
     "name": "navy1634"

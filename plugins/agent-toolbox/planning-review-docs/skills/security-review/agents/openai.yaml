@@ -1,0 +1,3 @@
+interface:
+  display_name: "セキュリティレビュー"
+  short_description: "認証、外部入力、secret、公開境界の確認"

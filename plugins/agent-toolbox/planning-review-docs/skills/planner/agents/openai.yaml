@@ -1,0 +1,3 @@
+interface:
+  display_name: "実装計画の作成・改訂"
+  short_description: "要件、設計、依存順、検証を含む計画"
