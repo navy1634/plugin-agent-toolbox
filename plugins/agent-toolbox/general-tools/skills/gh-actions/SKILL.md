@@ -19,7 +19,19 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 ### workflow の責務
 
 - workflow は、trigger、信頼境界、job graph、外部サービスへの受け渡し、結果の可視化を定義します。アプリケーションの実装手順や lint／test のオプションを workflow に複製しません。
-- CI、plan、deploy、release の責務を分け、権限、secret、environment、失敗時の影響が異なる処理を一つの無制限な job にまとめません。
+- 一つの workflow ファイルには、独立して起動・運用する責務を一つ持たせます
+- 検証対象や目的が独立している CI は、それぞれ別 workflow にします
+- CI と CD／deploy も別 workflow にします
+- 独立して実行する plan や release も、別 workflow にします
+- 共通の event や設定だけを理由に、別の責務を統合しません
+- 権限、secret、environment、失敗条件が異なる段階は、job を分けます
+- 各 workflow の trigger と path scope は、その責務に合わせます
+- 検査に影響する入力・設定と workflow 自身の変更を対象に含めます
+- 無関係な変更では検査を起動しません
+- 一つの責務に属する段階は、job を分けて graph で表します
+- 各 step は、一つのまとまった操作を担当します
+- 無関係な処理を一つの `run` に詰め込みません
+- 複数箇所で使う関連 step は、責務を保った composite action にまとめます
 - workflow、job、step の入力、出力、成果物、失敗条件を追跡できるようにします。暗黙の環境変数、暗黙の job 順序、暗黙の権限継承に依存しません。
 - YAML の改行、インデント、整形規則をこの skill で新たに固定せず、repository の formatter、lint 設定、既存 workflow の構成を source of truth とします。手動で見た目だけを整える変更を追加しません。
 
@@ -53,6 +65,10 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 
 - workflow の `permissions:` を明示し、基本は `contents: read` とします。書き込みが必要な job だけ job 単位で scope を広げ、`id-token: write` は OIDC 認証 job に限定します。
 - secret は GitHub Secrets または OIDC から必要な job／Environment へだけ渡し、非機密の環境依存値は `vars` に置きます。secret を shell、ログ、artifact、cache、job output に出力せず、long-lived credential を新たに保存しません。
+- PR 作成・更新など一般的な workflow 操作は、独自の Git／GitHub API ロジックを書く前に、GitHub の標準機能や広く利用される既存 Action を調べます
+- `peter-evans/create-pull-request` などの候補は、要件への適合と保守・供給網・権限を評価し、安全に使える場合は独自ロジックより優先します
+- stars、利用数、Marketplace の表示、lockfile の pin だけで安全と判断しません。評価基準は [Actions and supply chain](references/actions-and-supply-chain.md) に従います
+- 適切な候補がない場合だけ独自実装を選び、理由を記録して必要最小限の step または action に閉じ込めます
 - 外部 `uses:` には確認済みの release tag を指定し、解決済み commit は `gh actions-lock` が管理する `.github/workflows/actions.lock` に記録します
 - `uses:` に SHA を直書きせず、依存追加・変更後は `gh actions-lock` を実行し、CI で `gh actions-lock --verify` を通します
 - 公式 action も同じ方法で管理し、更新時には取得元、release、依存、必要権限、実行コードを確認します
@@ -60,7 +76,9 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 
 ### 再利用と責務の境界
 
-- 同じ job／step 群が複数箇所に現れる場合は、まず `.github/actions/<name>/action.yml` の composite action で job 内の手順を共有します。`.github/workflows` に置かれる reusable workflow は通常の workflow と実行定義が混ざるため既定にせず、job graph、Environment、approval、job 単位の permissions などを共有し、composite action で表現できない場合だけ採用します。
+- 同じ責務の job／step 群が複数箇所にある場合、まず composite action で共有します
+- reusable workflow は既定にしません。同じ責務の job graph を共有し、composite action で表せない場合に限ります
+- 別の責務をまとめる目的で、再利用 component を作りません
 - reusable workflow は `workflow_call` の input、secret、type、required、outputs、permissions を呼び出し側との契約として明示します。composite action は input、output、失敗時の挙動を明示し、caller の暗黙の secret や環境に依存させません。
 - AWS 認証、runtime／task runner の setup、cache と依存インストール、ECR login と image push など、複数 workflow／job で繰り返す処理は一箇所へ集約し、設定の drift を防ぎます。
 
@@ -89,6 +107,11 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 - [ ] `permissions:` を workflow と必要な job に明示し、最小権限にした
 - [ ] 解決可能な外部 action の commit が `.github/workflows/actions.lock` に記録され、`gh actions-lock --verify` と CI の lock 検証が成功した
 - [ ] extension が扱わない依存は適用範囲を分けて確認した
+- [ ] 一般的な操作に既存機能や Action があるかを調べ、適合性、保守状況、実行コード、依存、権限を評価した
+- [ ] 人気や lockfile の pin だけを安全性の根拠にせず、独自実装を選ぶ場合は理由と範囲を明示した
+- [ ] 独立した検証責務を別 workflow にし、CI と CD を統合していない
+- [ ] path scope が対象入力と workflow 自身を含み、required check の skip 影響も確認した
+- [ ] job、step、composite action の責務を分け、無関係な処理を同じ単位に詰め込んでいない
 - [ ] job の `needs`、step の順序、outputs、`if:`、失敗時の扱い、`timeout-minutes`、`concurrency` を意図どおりに定義した
 - [ ] secret、credential、個人情報がログ、artifact、cache、output に露出しないことを確認した
 - [ ] untrusted code と privileged な job を分離し、shell injection と `pull_request_target` の危険な checkout を排除した

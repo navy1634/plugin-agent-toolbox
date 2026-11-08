@@ -1,16 +1,38 @@
 # 再利用可能ワークフローと composite action
 
-重複を減らすこと自体ではなく、権限・入力・失敗時の契約を一箇所で維持する必要がある場合に再利用します。job 内の setup、login、cache、command などの手順は、可能な限り `.github/actions/<name>/action.yml` の composite action を既定の共有先にします。`.github/workflows` に置かれる reusable workflow は通常の workflow と実行定義が混ざるため既定にせず、job graph、Environment、approval、job 単位の permissions などを共有し、composite action で表現できない場合だけ採用します。呼び出し側の暗黙の secret、Environment、permissions、runner に依存させず、caller と reusable component の境界を読めるようにします。
+検証対象や目的が独立している CI は、別 workflow にします。
+CI と CD／deploy も、別 workflow にします。
+共通設定は再利用しても、workflow の責務は混ぜません。
+job は段階、step は操作、action は再利用する関連 step 群を表します。
+
+再利用は、権限・入力・失敗時の契約を一箇所で保つ必要がある場合に行います。
+job 内で繰り返す関連 step は、composite action を既定の共有先にします。
+reusable workflow は既定にしません。
+同じ責務の job graph、Environment、approval、permissions を共有する場合に限ります。
+composite action で表せない場合だけ採用します。
+caller の secret、Environment、permissions、runner に暗黙に依存させません。
 
 ## 切り出し先の選択
 
 | 対象 | composite action（既定） | reusable workflow（例外） |
 | --- | --- | --- |
-| 責務 | 一つの job 内で繰り返す setup、login、cache、command の step 群 | 複数 job の graph、承認、Environment、CI／deploy の一連の workflow |
+| 責務 | 一つの job 内で繰り返す、一つのまとまった操作の step 群 | 同じ責務を担う複数 job の graph、承認、Environment、job 単位の permissions |
 | 定義場所 | `.github/actions/<name>/action.yml` | `.github/workflows/reusable-*.yml` |
 | 呼び出し方 | step の `uses: ./.github/actions/<name>` | job の `uses: ./.github/workflows/<file>.yml` |
 | 契約 | `inputs`、outputs、`runs.using`、各 step の失敗条件 | `on.workflow_call.inputs`、`secrets`、outputs、permissions |
-| 適用判断 | 同じ job／step 群が2箇所以上に現れる | job が複数 workflow にまたがって同じ責務を持ち、composite action で表現できない |
+| 適用判断 | 同じ責務の job／step 群が2箇所以上に現れる | 同じ責務の job graph が複数 workflow にまたがって必要で、composite action で表現できない |
+
+## job、step、action の境界
+
+- job は、一つの workflow の責務に属する段階を表します
+- 異なる権限、runner、Environment、依存関係を持つ段階は、別 job にします
+- step は一つのまとまった操作を担当します。名前と失敗条件を明示します
+- lint、test、build など、個別結果を確認する検査は別 step にします
+- 一つの task runner command が一つの検査を表す場合、その command は一つの step で実行できます
+- composite action は、複数 workflow／job で再利用する関連 step をまとめます
+- 行数削減だけを目的に、別の操作や責務を一つの action にまとめません
+- reusable workflow は、同じ責務の job graph と権限・承認境界を共有する場合に使います
+- CI の完了後に CD を行うだけの理由で、両方を同じ reusable workflow にしません
 
 次のような処理は複数 workflow／job で繰り返す場合に composite action へ集約します。各 workflow に同じ設定を並べると、SHA、option、権限、region の変更漏れによる drift が起きます。
 

@@ -2,6 +2,11 @@
 
 workflow の責務、実行対象、job 間の依存、実行制御を一つの構成として確認します。既存 repository の構成と命名がある場合は、それを優先します。
 
+一つの workflow ファイルは、独立して起動・運用する責務を一つ持ちます。
+異なる検証目的の CI と、CI と CD／deploy は別 workflow にします。
+共通の event や設定だけでは、責務を統合しません。
+複数 job は、同じ責務に属する段階を表す場合に限ります。
+
 ## ディレクトリ構成
 
 標準的な配置は次のとおりです。workflow は job の組み合わせ、composite action は job 内で繰り返す step 群として責務を分けます。`.github/workflows` に置く reusable workflow は通常の workflow と同じ場所で実行定義を構成するため、composite action で表現できない job 単位の共有が必要な場合だけ使います。
@@ -9,7 +14,7 @@ workflow の責務、実行対象、job 間の依存、実行制御を一つの�
 ```text
 .github/
 ├── workflows/
-│   ├── ci.yml              # PR で lint / test を実行する
+│   ├── ci-<scope>.yml      # 独立した検証目的ごとの workflow
 │   ├── deploy-{env}.yml    # 環境別に deploy する
 │   ├── release.yml         # release を作成・公開する
 │   └── reusable-*.yml      # workflow_call（composite で表現できない job 単位の共有）
@@ -40,7 +45,32 @@ event、ref、checkout 対象、実行 actor、利用できる token／secret �
 | `workflow_dispatch`（例外） | 手動実行時の明示した ref と choice input | 原則使用せず、理由、ref、input、Environment の allowlist、trust boundary を記録する |
 | `schedule` | 定義した cron の default branch | 時刻ずれ、重複実行、secret と外部操作の影響を確認する |
 
-CI、plan、deploy の trigger を同じにせず、untrusted な検査と privileged な操作を job または workflow で分けます。`workflow_dispatch` は原則使用せず、実行確認または push／schedule などでは成立しない要件がある場合だけ許可します。許可時は、使用理由、実行 ref、input、Environment の allowlist、trust boundary、承認条件を workflow と運用記録に残します。手動入力で任意の shell や任意の Environment を指定できる構成は採用しません。
+CI、plan、deploy は各責務に応じた trigger を持ちます。
+CI と deploy は別 workflow にします。
+untrusted な検査と privileged な操作は、job の権限境界も分けます。
+`workflow_dispatch` は原則使用しません。
+push／schedule では成立しない要件がある場合だけ許可します。
+許可時は、理由、実行 ref、input、Environment の allowlist、trust boundary、承認条件を記録します。
+任意の shell や Environment を手動入力で指定できる構成は採用しません。
+
+### path filter と必須 check
+
+- path filter を決める前に、各検査が実際に読む source と設定を調べます
+- 既存 workflow、task runner、test command、dependency 設定を根拠にします
+- source、shared library、module、lockfile などの依存関係を追います
+- directory 名や拡張子だけから、検査対象を推測しません
+- `paths` または `paths-ignore` は、調査した入力と依存関係から決めます
+- shared file が複数の検査に影響する場合、その全ての scope に含めます
+- workflow 自身のファイルも対象に含め、変更時に該当する検査を実行します
+- 無関係なファイルを広く含める `**` は、必要性を確認してから使います
+- 根拠から対象範囲を決められない場合、推測で狭めず未確定事項として報告します
+- workflow-level filter で skip された check は `Pending` になります
+- その check が required の場合、PR の merge を止めます
+- skip 可能な workflow 自体を required check にしません
+- 必要な場合は常時実行する gate を置き、その中で対象 job を条件付きで実行します
+- job-level で skip した job は `Success` になります
+- required check 名と gate の最終結果を確認します
+- 詳細は [GitHub 公式資料](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs)を参照します
 
 ## job graph と step
 
