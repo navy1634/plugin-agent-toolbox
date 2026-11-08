@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v4.2.2
       - name: plan を実行
         working-directory: ${{ inputs.working-directory }}
         run: terraform plan -input=false
@@ -73,7 +73,8 @@ reusable workflow が Environment を使う場合は、callee 側で対象を固
 
 ## composite action の契約
 
-composite action は `.github/actions/<name>/action.yml` に置き、必須 input、default、description、output、runtime、失敗時の挙動を明示します。外部 action を内部で呼ぶ場合も commit SHA pin と version comment を付けます。
+composite action は `.github/actions/<name>/action.yml` に置き、必須 input、default、description、output、runtime、失敗時の挙動を明示します。
+外部 action を内部で呼ぶ場合は release tag を指定し、`gh-actions-lock` の lockfile に含めます。
 
 ```yaml
 # .github/actions/aws-login/action.yml
@@ -90,7 +91,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+    - uses: aws-actions/configure-aws-credentials@v4.0.2
       with:
         role-to-assume: ${{ inputs.role-to-assume }}
         aws-region: ${{ inputs.aws-region }}
@@ -110,7 +111,7 @@ AWS OIDC の role trust policy、account、resource、Terraform の module／sta
 ## 再利用時の確認
 
 - caller と component の入力、出力、secret、permissions、Environment、runner、timeout が明示されている
-- component 内の外部 action が SHA pin され、version 更新を一箇所で追跡できる
+- component 内の外部 action が `actions.lock` に記録され、`gh actions-lock --verify` で検証できる
 - untrusted input が component 内で shell、path、command、Environment 名に直接展開されない
 - action の失敗が caller で成功扱いにならず、`continue-on-error` の意味と最終判定が一致する
 - cache、artifact、ログが caller 間で秘密値や untrusted data を混ぜない

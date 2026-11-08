@@ -16,7 +16,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v4.2.2
       - run: uv run task test
 
   deploy:
@@ -26,7 +26,7 @@ jobs:
     environment: prd
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v4.2.2
       - uses: ./.github/actions/aws-login
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}

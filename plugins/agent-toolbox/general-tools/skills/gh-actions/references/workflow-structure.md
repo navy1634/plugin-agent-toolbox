@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v4.2.2
       - name: lint を実行
         run: uv run task lint
 
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v4.2.2
       - name: test を実行
         run: uv run task test
 ```
@@ -119,7 +119,7 @@ cache は再現性と機密性を優先して設計します。
 
 ```yaml
 - name: 依存関係の cache を復元
-  uses: actions/cache@<検証済みコミットSHA> # v4.x
+  uses: actions/cache@v4
   with:
     path: ~/.cache/uv
     key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
@@ -127,4 +127,5 @@ cache は再現性と機密性を優先して設計します。
       ${{ runner.os }}-uv-
 ```
 
-実際の workflow では `<検証済みコミットSHA>` を残さず、action の commit SHA と version comment を確定させます。
+実際の workflow では release tag を指定し、`gh actions-lock` で解決済み commit を lockfile に記録します。
+`hashFiles` は cache key 用の hash であり、action の依存固定とは別です。

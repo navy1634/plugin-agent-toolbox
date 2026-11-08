@@ -7,7 +7,8 @@ workflow の変更は、ローカルの構文・静的確認、GitHub 上の CI 
 対象 workflow と composite action を確認してから、次を実施します。
 
 1. `.github/workflows/*.yml` と `.yaml`、`.github/actions/**/action.yml` の変更範囲を特定する。
-2. `actionlint` と YAML 構文、全外部 `uses:` の commit SHA pin、version comment を確認する。
+2. `actionlint` と YAML 構文を確認し、`gh actions-lock --verify` で外部 action の lockfile と解決済み commit を検証する。
+   extension が扱わない依存境界は別に確認する。
 3. `permissions:`、job の `needs`、`if:`、`timeout-minutes`、`concurrency`、matrix、cache、artifact の境界を確認する。
 4. trigger ごとの ref、actor、checkout code、untrusted input、secret／OIDC、Environment、write token の境界を確認する。
 5. `workflow_dispatch` を原則使用していないことを確認する。使用している場合は、push／schedule では成立しない要件または実行確認という理由、`--ref` と実際の ref、input の型・allowlist、Environment、approval、trust boundary の記録を確認する。
@@ -22,6 +23,11 @@ actionlint .github/workflows/*.yml
 
 # YAML 拡張子が混在する場合は対象を追加して確認する
 actionlint .github/workflows/*.yaml
+```
+
+```bash
+# action lockfile と upstream の整合性
+gh actions-lock --verify
 ```
 
 CI の lint／format／test／build は、個別ツールを workflow から直呼び出しせず、repository が定める task runner を source of truth とします。
@@ -60,7 +66,8 @@ workflow 編集後の実行確認と失敗調査には `gh` CLI を使います�
 workflow 変更時は、該当しない項目を理由付きで明示し、確認できた項目を全て満たします。
 
 - [ ] `permissions:` を明示し、job ごとに最小化した
-- [ ] 全外部 `uses:` を commit SHA で pin し、version をコメント併記した
+- [ ] 解決可能な外部 action の commit が `.github/workflows/actions.lock` に記録され、`gh actions-lock --verify` が成功した
+- [ ] CI で lockfile を検証し、extension が扱わない local action と外部 reusable workflow の依存を別に確認した
 - [ ] `concurrency:` と `timeout-minutes:` を設定し、cancel／再実行の安全性を確認した
 - [ ] secrets、`GITHUB_TOKEN`、OIDC credentials を print／echo、artifact、cache、output に出していない
 - [ ] AWS 認証は OIDC で、long-lived key を保存していない（AWS を使う場合）
