@@ -53,7 +53,9 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 
 - workflow の `permissions:` を明示し、基本は `contents: read` とします。書き込みが必要な job だけ job 単位で scope を広げ、`id-token: write` は OIDC 認証 job に限定します。
 - secret は GitHub Secrets または OIDC から必要な job／Environment へだけ渡し、非機密の環境依存値は `vars` に置きます。secret を shell、ログ、artifact、cache、job output に出力せず、long-lived credential を新たに保存しません。
-- 外部 `uses:` は commit SHA で pin し、コメントで元の version を併記します。公式 action も例外にせず、更新時には取得元、release、依存、必要権限、実行コードを確認します。
+- 外部 `uses:` には確認済みの release tag を指定し、解決済み commit は `gh actions-lock` が管理する `.github/workflows/actions.lock` に記録します
+- `uses:` に SHA を直書きせず、依存追加・変更後は `gh actions-lock` を実行し、CI で `gh actions-lock --verify` を通します
+- 公式 action も同じ方法で管理し、更新時には取得元、release、依存、必要権限、実行コードを確認します
 - untrusted input を shell や action input に渡す場合は allowlist、環境変数への分離、適切な quoting を行い、文字列連結による script injection を許しません。
 
 ### 再利用と責務の境界
@@ -72,7 +74,8 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 
 ## 常時禁止するパターン
 
-- `uses: <name>@vN` のような tag／branch 参照、明示しない `permissions:`、未設定の job timeout、secret の `echo`／`set -x` を残しません。
+- 外部 action の commit SHA を `uses:` に直書きせず、lockfile と CI の検証対象にします
+- `permissions:` と job の `timeout-minutes` を明示し、secret を `echo`／`set -x` で出力しません
 - long-lived AWS access key を secrets に保存せず、AWS 認証は OIDC とします。OIDC の IAM Role／Provider は Terraform code で管理せず、管理元の記録と変更手順は `terraform` skill と repository の既存方針に従います。
 - task runner があるのに `ruff`、`pytest`、`eslint`、`prettier`、`tsc` などを workflow から直接呼び出しません。Terraform の専用 gate は例外として [Terraform CI](references/terraform-ci.md) に従います。
 - `pull_request_target` で untrusted な PR head を実行せず、Environment の境界を無視した環境別 secret／vars の平置き、権限の広い shared job、失敗を隠す `continue-on-error` を採用しません。
@@ -84,7 +87,8 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 
 - [ ] 対象 event、ref、actor、checkout 対象、信頼境界、secret／OIDC の可用範囲を確認した
 - [ ] `permissions:` を workflow と必要な job に明示し、最小権限にした
-- [ ] 外部 `uses:` をすべて commit SHA で pin し、version コメントを併記した
+- [ ] 解決可能な外部 action の commit が `.github/workflows/actions.lock` に記録され、`gh actions-lock --verify` と CI の lock 検証が成功した
+- [ ] extension が扱わない依存は適用範囲を分けて確認した
 - [ ] job の `needs`、step の順序、outputs、`if:`、失敗時の扱い、`timeout-minutes`、`concurrency` を意図どおりに定義した
 - [ ] secret、credential、個人情報がログ、artifact、cache、output に露出しないことを確認した
 - [ ] untrusted code と privileged な job を分離し、shell injection と `pull_request_target` の危険な checkout を排除した
@@ -99,7 +103,7 @@ GitHub Actions の workflow は、イベントを受けて検査、build、plan�
 
 - [Workflow structure](references/workflow-structure.md) — workflow の配置、命名、trigger、job／step graph、実行制御、matrix、cache を設計・変更するときに読む。
 - [Permissions and secrets](references/permissions-and-secrets.md) — `permissions`、secret、vars、Environment、fork／PR からの secret 境界を設計・レビューするときに読む。
-- [Actions and supply chain](references/actions-and-supply-chain.md) — action の SHA pin、第三者 action、untrusted input、script injection、`pull_request_target` をレビューするときに読む。
+- [Actions and supply chain](references/actions-and-supply-chain.md) — `gh-actions-lock` による依存固定、第三者 action、untrusted input、script injection、`pull_request_target` をレビューするときに読む
 - [Environments and AWS](references/environments-and-aws.md) — GitHub Environment、複数環境の切替、AWS OIDC の受け渡しを設計・レビューするときに読む。
 - [Reuse](references/reuse.md) — reusable workflow と composite action の切り出し、caller／callee 契約、共通処理の集約を行うときに読む。
 - [Terraform CI](references/terraform-ci.md) — Terraform の fmt、validate、TFLint、plan、apply を GitHub Actions に組み込むときに読む。

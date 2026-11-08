@@ -2,18 +2,44 @@
 
 外部 action は workflow の権限で code を実行する依存関係です。取得元、実行される commit、必要な権限、transitive dependency、runner に渡す credential を確認してから採用・更新します。
 
-## commit SHA で pin する
+## gh-actions-lock による依存固定
 
-すべての外部 `uses:` は tag や branch ではなく commit SHA で pin し、コメントで元の version を併記します。公式 action（`actions/*`）も例外にしません。`@v4`、`@main`、短縮 SHA、ユーザー入力から組み立てた ref は採用しません。
+外部 `uses:` には読みやすい release tag を記述し、検証済み commit は `.github/workflows/actions.lock` で管理します。
+SHA を `uses:` に直書きせず、lockfile は手編集しません。
+公式 action（`actions/*`）も同じ方法で管理します。
 
 ```yaml
-- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-- uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+- uses: actions/checkout@v4.2.2
+- uses: aws-actions/configure-aws-credentials@v4.0.2
 ```
 
-repository 内の composite action を `uses: ./.github/actions/<name>` で参照する場合は local path のため外部 SHA はありません。ただし、その action の中で呼び出す外部 action はすべて SHA pin し、caller から渡す input、secret、権限を明示します。
+依存を追加・変更したら repository の root で次を実行し、workflow と lockfile を同じ変更に含めます。
 
-version comment は人間が SHA の対応 version を追跡するために残します。Dependabot または Renovate を使う場合は、更新 PR で SHA、version、release、差分、必要権限の変更を確認してから取り込みます。自動更新を有効にしても、権限や実行 code のレビューを省略しません。
+```bash
+gh extension install github/gh-actions-lock
+gh actions-lock
+gh actions-lock --verify
+```
+
+extension は通常実行で lockfile にない ref を解決します。
+既存依存を意図的に更新する場合は `gh actions-lock --relock` を使い、差分と upstream release を確認します。
+CI では `gh actions-lock --verify` を実行します。
+公式の [verify-lockfile.yml](https://github.com/github/gh-actions-lock/blob/main/.github/workflows/verify-lockfile.yml) を導入した場合は、その workflow も lockfile に含めるため、追加後に `gh actions-lock` を再実行します。
+`--verify-local` は lockfile の coverage だけを調べるため、CI の検証には使いません。
+
+CLI の flag は変更される可能性があるため、迷った場合は [gh-actions-lock README](https://github.com/github/gh-actions-lock#readme) と `gh actions-lock --help` を確認します。
+
+同一 repository 内の composite action を `uses: ./.github/actions/<name>` で参照するだけなら、その path 自体に lock entry はありません。
+local composite action が外部 action を呼ぶ場合、extension は workspace path を追跡しないため `local-action` の blocking finding になります。
+`gh actions-lock --migrate-local-actions` は同一 repository の path を `$/...` に変換して依存を追跡できるようにします。
+`--ignore-local-actions` は warning に下げるだけで依存を lock しません。
+未記録の外部依存があれば、実行時に失敗する可能性があります。
+外部 reusable workflow を `jobs.<id>.uses` から呼ぶ依存は、呼び出し元の lock 対象外です。
+呼び出し先 repository の lockfile と適用範囲を別に確認します。
+
+release tag と lockfile の対応が意図した取得元・version・commit であることを確認します。
+Dependabot または Renovate を使う場合も、更新 PR で release、lockfile の変更、差分、必要権限の変更を確認してから取り込みます。
+自動更新を有効にしても、権限や実行 code のレビューを省略しません。
 
 ## 第三者 action のレビュー
 
@@ -64,7 +90,8 @@ PR に反応して comment や label だけを更新する必要がある場合�
 
 | 禁止 | 代替 |
 | --- | --- |
-| `uses: <name>@vN`（tag／branch 参照） | `uses: <name>@<commit-sha> # vX.Y.Z` |
+| `uses:` に commit SHA を直書きする | release tag を `uses:` に記述し、`gh-actions-lock` で lockfile に記録する |
+| lock entry がない外部 action | `gh actions-lock` を実行し、`gh actions-lock --verify` を通す |
 | untrusted input を `run:` 本文へ直接展開 | `env` へ渡して quote し、allowlist と validation を行う |
 | `pull_request_target` で PR head を checkout／実行 | `pull_request` の read-only 検査と trusted な更新 job を分離する |
 | third-party action に不要な secret／write token を渡す | action の契約に必要な値だけを job／step に渡す |
