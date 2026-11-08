@@ -1,0 +1,3 @@
+interface:
+  display_name: "コード・文書の共通規約"
+  short_description: "命名、構造、README・文書の品質"

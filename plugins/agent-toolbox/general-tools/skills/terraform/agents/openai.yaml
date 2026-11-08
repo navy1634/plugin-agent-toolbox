@@ -1,0 +1,3 @@
+interface:
+  display_name: "AWS Terraform設計・運用"
+  short_description: "Terraform変更、plan、stateの安全確認"

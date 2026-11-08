@@ -1,0 +1,3 @@
+interface:
+  display_name: "GitHub Actions設計・運用"
+  short_description: "workflow、権限、CI/CDの構成と検証"

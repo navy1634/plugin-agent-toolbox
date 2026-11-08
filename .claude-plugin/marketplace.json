@@ -9,25 +9,25 @@
       "name": "planning-review-docs",
       "source": "./plugins/agent-toolbox/planning-review-docs",
       "description": "実装計画、セキュリティレビューのskills",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "general-tools",
       "source": "./plugins/agent-toolbox/general-tools",
       "description": "AWS CLI、GitHub Actions、Terraformのskills",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "coding-workflow",
       "source": "./plugins/agent-toolbox/coding-workflow",
       "description": "実装、コーディング規約、テスト、開発workflow向けのskills",
-      "version": "0.2.2"
+      "version": "0.2.3"
     },
     {
       "name": "specialized",
       "source": "./plugins/agent-toolbox/specialized",
       "description": "事後検証、技術記事作成のskills",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ]
 }
